@@ -1,0 +1,1 @@
+export default function SplashLoading(){return <div style={{minHeight:"100vh",display:"grid",placeItems:"center"}}><div className="card" style={{textAlign:"center"}}><h1>Career Compass AI</h1><p>Guiding students toward better career decisions</p><div className="progress"><div style={{width:"55%"}}/></div></div></div>}

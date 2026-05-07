@@ -1,0 +1,59 @@
+.saved-careers-page {
+  display: grid;
+  gap: 24px;
+}
+
+.saved-error {
+  border-radius: 16px;
+  padding: 14px 16px;
+  background: #fff1f2;
+  color: #be123c;
+  border: 1px solid #fecdd3;
+  font-weight: 800;
+}
+
+.saved-career-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 22px;
+}
+
+.saved-career-card {
+  border-radius: 28px;
+  padding: 26px;
+  background: var(--student-card);
+  border: 1px solid rgba(255, 255, 255, 0.86);
+  box-shadow: var(--student-shadow);
+}
+
+.saved-career-card > span {
+  display: inline-flex;
+  border-radius: 999px;
+  padding: 7px 11px;
+  background: #eaf4ff;
+  color: var(--student-primary);
+  font-size: 0.76rem;
+  font-weight: 900;
+}
+
+.saved-career-card h2 {
+  margin: 16px 0 8px;
+}
+
+.saved-career-card p {
+  color: var(--student-muted);
+  line-height: 1.7;
+}
+
+.saved-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 22px;
+}
+
+@media (max-width: 800px) {
+  .saved-career-grid {
+    grid-template-columns: 1fr;
+  }
+}

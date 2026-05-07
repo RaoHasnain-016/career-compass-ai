@@ -1,0 +1,117 @@
+.roadmap-page {
+  display: grid;
+  gap: 24px;
+}
+
+.roadmap-progress-card {
+  border-radius: 28px;
+  padding: 24px;
+  background: linear-gradient(135deg, #0b67c2, #0ea5e9);
+  color: #fff;
+  box-shadow: 0 24px 55px rgba(11, 103, 194, 0.22);
+}
+
+.roadmap-progress-card > div:first-child {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.roadmap-progress-card span {
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.8rem;
+}
+
+.roadmap-progress-card strong {
+  font-size: 2rem;
+}
+
+.roadmap-progress-track {
+  height: 12px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.24);
+  overflow: hidden;
+}
+
+.roadmap-progress-track span {
+  display: block;
+  height: 100%;
+  background: #fff;
+  border-radius: inherit;
+}
+
+.roadmap-stage-list {
+  display: grid;
+  gap: 18px;
+}
+
+.roadmap-stage-card {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 18px;
+  padding: 24px;
+  border-radius: 28px;
+  background: var(--student-card);
+  border: 1px solid rgba(255, 255, 255, 0.86);
+  box-shadow: var(--student-shadow);
+}
+
+.roadmap-stage-card > button {
+  width: 54px;
+  height: 54px;
+  border: 0;
+  border-radius: 18px;
+  display: grid;
+  place-items: center;
+  background: #eaf4ff;
+  color: var(--student-primary);
+  font-weight: 950;
+  cursor: pointer;
+}
+
+.roadmap-stage-card.completed > button {
+  background: #10b981;
+  color: #fff;
+}
+
+.roadmap-stage-card span {
+  color: var(--student-primary);
+  font-size: 0.75rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.roadmap-stage-card h2 {
+  margin: 5px 0 8px;
+}
+
+.roadmap-stage-card p {
+  color: var(--student-muted);
+  line-height: 1.7;
+}
+
+.roadmap-stage-grid {
+  margin-top: 18px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+}
+
+.roadmap-stage-grid h3 {
+  margin: 0 0 10px;
+  color: #334155;
+}
+
+.roadmap-stage-card .cc-btn {
+  margin-top: 18px;
+}
+
+@media (max-width: 760px) {
+  .roadmap-stage-card,
+  .roadmap-stage-grid {
+    grid-template-columns: 1fr;
+  }
+}

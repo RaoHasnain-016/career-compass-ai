@@ -1,0 +1,1 @@
+export default function AuthLayout({children}){return <main style={{minHeight:"100vh",display:"grid",placeItems:"center",padding:24,background:"linear-gradient(135deg,#eff6ff,#ffffff)"}}>{children}</main>}

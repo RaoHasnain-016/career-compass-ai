@@ -1,0 +1,2 @@
+import { Link } from "react-router-dom";
+export default function CareerCard({ career }){ return <div className="card"><span className="badge">{career.match_score || 86}% Match</span><h3>{career.title}</h3><p>{career.description || career.overview}</p><p><b>Skills:</b> {(career.required_skills||[]).join(', ')}</p><div className="progress"><div style={{width:`${career.match_score || 86}%`}} /></div><br/><Link className="btn" to={`/career/${career.career_id || career.id || 1}`}>View Details</Link> <button className="btn secondary">Save Career</button></div> }

@@ -1,0 +1,1 @@
+export default function WelcomeOnboarding(){return <div className="page"><div className="card"><h1>Start Your Career Journey</h1><p>We will analyze your academic background, interests and skills to guide your future.</p><a className="btn" href="/profile-setup">Start Assessment</a> <a className="btn secondary" href="/dashboard">Skip for Now</a></div></div>}

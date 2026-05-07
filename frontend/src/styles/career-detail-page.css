@@ -1,0 +1,101 @@
+.career-detail-page {
+  display: grid;
+  gap: 24px;
+}
+
+.career-detail-grid {
+  display: grid;
+  grid-template-columns: 1.7fr 0.8fr;
+  gap: 22px;
+}
+
+.career-overview-card h2,
+.career-scope-card h2,
+.career-advice-card h2 {
+  margin: 0 0 12px;
+}
+
+.career-overview-card p,
+.career-scope-card p,
+.career-advice-card p {
+  color: var(--student-muted);
+  line-height: 1.75;
+}
+
+.career-field {
+  display: inline-flex;
+  margin-bottom: 18px;
+  border-radius: 999px;
+  padding: 7px 11px;
+  background: #eaf4ff;
+  color: var(--student-primary);
+  font-size: 0.78rem;
+  font-weight: 900;
+}
+
+.career-facts {
+  margin-top: 24px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+.career-facts div {
+  border-radius: 18px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  padding: 16px;
+}
+
+.career-facts small {
+  display: block;
+  color: #94a3b8;
+  font-size: 0.72rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+
+.career-facts strong {
+  font-size: 1.25rem;
+}
+
+.career-scope-card {
+  background: #0f172a;
+  color: #fff;
+}
+
+.career-scope-card > svg {
+  color: #22d3ee;
+  font-size: 2rem;
+  margin-bottom: 16px;
+}
+
+.career-scope-card p {
+  color: #cbd5e1;
+}
+
+.career-message {
+  border-radius: 16px;
+  padding: 14px 16px;
+  font-weight: 800;
+}
+
+.career-message.success {
+  background: #ecfdf5;
+  color: #047857;
+  border: 1px solid #a7f3d0;
+}
+
+.career-message.error {
+  background: #fff1f2;
+  color: #be123c;
+  border: 1px solid #fecdd3;
+}
+
+@media (max-width: 900px) {
+  .career-detail-grid,
+  .career-facts {
+    grid-template-columns: 1fr;
+  }
+}

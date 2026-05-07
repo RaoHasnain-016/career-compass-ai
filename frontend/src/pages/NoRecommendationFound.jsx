@@ -1,0 +1,1 @@
+import StudentLayout from "../layouts/StudentLayout"; export default function NoRecommendationFound(){return <StudentLayout><div className="card" style={{textAlign:"center"}}><h1>No Strong Match Found Yet</h1><p>Please update your profile, interests, or skills to get better recommendations.</p><a className="btn" href="/profile-setup">Edit Profile</a></div></StudentLayout>}

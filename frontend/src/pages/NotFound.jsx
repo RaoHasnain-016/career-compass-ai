@@ -1,0 +1,1 @@
+export default function NotFound(){return <div className="page"><div className="card" style={{textAlign:"center"}}><h1>404</h1><p>Oops! This page does not exist.</p><a className="btn" href="/">Go Back Home</a></div></div>}

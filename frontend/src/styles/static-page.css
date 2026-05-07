@@ -1,0 +1,195 @@
+.static-student-page {
+  display: grid;
+  gap: 22px;
+}
+
+.static-search {
+  min-height: 52px;
+  border-radius: 18px;
+  background: var(--student-card);
+  border: 1px solid rgba(255, 255, 255, 0.86);
+  box-shadow: var(--student-shadow);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 16px;
+  color: #64748b;
+}
+
+.static-search input {
+  width: 100%;
+  border: 0;
+  outline: 0;
+  background: transparent;
+}
+
+.faq-list {
+  display: grid;
+  gap: 16px;
+}
+
+.faq-list h2 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 10px;
+}
+
+.faq-list p {
+  margin: 0;
+  color: var(--student-muted);
+  line-height: 1.7;
+}
+
+.public-static-page {
+  min-height: calc(100vh - 80px);
+  padding: 44px 24px 70px;
+  background:
+    radial-gradient(circle at 18% 5%, rgba(11, 103, 194, 0.09), transparent 26%),
+    radial-gradient(circle at 86% 10%, rgba(124, 58, 237, 0.07), transparent 24%),
+    #f5f8fc;
+}
+
+.public-static-hero,
+.public-static-card,
+.public-static-grid,
+.public-pillar-grid {
+  width: min(1120px, 100%);
+  margin: 0 auto;
+}
+
+.public-static-hero {
+  margin-bottom: 28px;
+}
+
+.public-static-hero span {
+  display: inline-flex;
+  border-radius: 999px;
+  padding: 7px 11px;
+  background: #eaf4ff;
+  color: #0b67c2;
+  font-size: 0.78rem;
+  font-weight: 900;
+}
+
+.public-static-hero h1 {
+  margin: 14px 0 10px;
+  font-size: clamp(2.4rem, 6vw, 4.4rem);
+  letter-spacing: -0.05em;
+}
+
+.public-static-hero p {
+  max-width: 760px;
+  color: #64748b;
+  line-height: 1.75;
+}
+
+.public-static-card,
+.static-form-card,
+.static-info-card,
+.public-pillar-card {
+  border-radius: 28px;
+  background: rgba(255, 255, 255, 0.86);
+  border: 1px solid rgba(255, 255, 255, 0.88);
+  box-shadow: 0 20px 55px rgba(15, 23, 42, 0.08);
+  backdrop-filter: blur(16px);
+}
+
+.public-static-card {
+  padding: 30px;
+}
+
+.public-static-card p,
+.public-pillar-card p,
+.static-info-card p {
+  color: #64748b;
+  line-height: 1.75;
+}
+
+.public-static-grid {
+  display: grid;
+  grid-template-columns: 1.4fr 0.8fr;
+  gap: 22px;
+}
+
+.static-form-card {
+  padding: 24px;
+  display: grid;
+  gap: 14px;
+}
+
+.public-static-page .cc-input,
+.public-static-page .cc-textarea {
+  width: 100%;
+  border: 1px solid #cbd5e1;
+  background: #fff;
+  color: #0f172a;
+  border-radius: 14px;
+  padding: 12px 14px;
+  outline: 0;
+}
+
+.public-static-page .cc-textarea {
+  min-height: 130px;
+  resize: vertical;
+}
+
+.public-static-page .cc-btn {
+  border: 0;
+  min-height: 44px;
+  border-radius: 14px;
+  padding: 12px 16px;
+  background: #0b67c2;
+  color: #fff;
+  font-weight: 900;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.static-success {
+  margin: 0;
+  color: #047857;
+  font-weight: 850;
+}
+
+.static-info-card {
+  padding: 24px;
+  display: grid;
+  gap: 18px;
+}
+
+.static-info-card svg,
+.public-pillar-card svg {
+  color: #0b67c2;
+  font-size: 1.8rem;
+}
+
+.public-pillar-grid {
+  margin-top: 22px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 22px;
+}
+
+.public-pillar-card {
+  padding: 24px;
+}
+
+.terms-card h2 {
+  margin-top: 24px;
+}
+
+.terms-card h2:first-child {
+  margin-top: 0;
+}
+
+@media (max-width: 850px) {
+  .public-static-grid,
+  .public-pillar-grid {
+    grid-template-columns: 1fr;
+  }
+}

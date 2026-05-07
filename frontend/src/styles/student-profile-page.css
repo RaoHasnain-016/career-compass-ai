@@ -1,0 +1,95 @@
+.student-profile-page {
+  display: grid;
+  gap: 24px;
+}
+
+.profile-identity-card {
+  border-radius: 30px;
+  padding: 26px;
+  background: linear-gradient(135deg, #0b67c2, #0ea5e9);
+  color: #fff;
+  box-shadow: 0 24px 55px rgba(11, 103, 194, 0.22);
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.profile-identity-card img {
+  width: 88px;
+  height: 88px;
+  border-radius: 26px;
+  object-fit: cover;
+  border: 3px solid rgba(255, 255, 255, 0.5);
+}
+
+.profile-identity-card h2 {
+  margin: 0 0 4px;
+}
+
+.profile-identity-card p {
+  margin: 0 0 14px;
+  color: rgba(255, 255, 255, 0.82);
+}
+
+.profile-identity-card small {
+  font-weight: 900;
+}
+
+.profile-progress {
+  width: min(420px, 100%);
+  height: 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.24);
+  overflow: hidden;
+  margin-bottom: 7px;
+}
+
+.profile-progress span {
+  display: block;
+  height: 100%;
+  background: #fff;
+  border-radius: inherit;
+}
+
+.profile-info-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 22px;
+}
+
+.profile-info-grid h2 {
+  margin: 0 0 16px;
+}
+
+.profile-info-grid dl {
+  display: grid;
+  grid-template-columns: 150px 1fr;
+  gap: 12px;
+}
+
+.profile-info-grid dt {
+  color: #64748b;
+  font-weight: 850;
+}
+
+.profile-info-grid dd {
+  margin: 0;
+  font-weight: 800;
+}
+
+.cc-chip-list.weak span {
+  background: #fff7ed;
+  color: #c2410c;
+}
+
+@media (max-width: 800px) {
+  .profile-identity-card,
+  .profile-info-grid,
+  .profile-info-grid dl {
+    grid-template-columns: 1fr;
+  }
+
+  .profile-identity-card {
+    display: grid;
+  }
+}

@@ -1,0 +1,23 @@
+[2m12:12:45 AM[22m [31m[1m[vite][22m[39m [31mhttp proxy error: /recommendations/generate[39m
+Error: read ECONNRESET
+    at TCP.onStreamRead (node:internal/stream_base_commons:216:20)
+[2m12:18:57 AM[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m [2m[console.error] [22mBackend sync failed: Error: Invalid Firebase token: Token used too early, 1778181537 < 1778181538. Check that your computer's clock is set correctly.
+    at parseResponse (http://localhost:5173/src/services/api.js:94:17)
+    at async request (http://localhost:5173/src/services/api.js:110:11)
+    at async http://localhost:5173/src/components/ProtectedRoute.jsx:32:6
+[2m12:18:57 AM[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m [2m[console.error] [22mError: Invalid Firebase token: Token used too early, 1778181537 < 1778181538. Check that your computer's clock is set correctly.
+    at parseResponse (http://localhost:5173/src/services/api.js:94:17)
+    at async request (http://localhost:5173/src/services/api.js:110:11)
+    at async getOptional (http://localhost:5173/src/services/dashboardService.js:13:10)
+    at async Promise.all (index 0)
+    at async getDashboardData (http://localhost:5173/src/services/dashboardService.js:20:66)
+    at async http://localhost:5173/src/pages/Dashboard.jsx:168:17
+[2m12:18:58 AM[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m [2m[console.error] [22mError: Invalid Firebase token: Token used too early, 1778181537 < 1778181538. Check that your computer's clock is set correctly.
+    at parseResponse (http://localhost:5173/src/services/api.js:94:17)
+    at async request (http://localhost:5173/src/services/api.js:110:11)
+    at async getOptional (http://localhost:5173/src/services/dashboardService.js:13:10)
+    at async Promise.all (index 0)
+    at async getDashboardData (http://localhost:5173/src/services/dashboardService.js:20:66)
+    at async http://localhost:5173/src/pages/Dashboard.jsx:168:17
+[2m12:23:52 AM[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m [2m[console.error] [22m[vite] Failed to reload /src/pages/Chatbot.jsx. This could be due to syntax errors or importing non-existent modules. (see errors above)
+[2m12:24:50 AM[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m [2m[console.error] [22m[vite] Failed to reload /src/styles/chatbot-page.css. This could be due to syntax errors or importing non-existent modules. (see errors above)

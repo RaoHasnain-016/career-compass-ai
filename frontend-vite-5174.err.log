@@ -1,0 +1,59 @@
+[2m11:03:08 PM[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m [2m[console.error] [22mBackend sync failed: Error: Invalid Firebase token: Token used too early, 1778176988 < 1778176989. Check that your computer's clock is set correctly.
+    at parseResponse (http://localhost:5174/src/services/api.js:94:17)
+    at async request (http://localhost:5174/src/services/api.js:110:11)
+    at async http://localhost:5174/src/components/ProtectedRoute.jsx:32:6
+[2m11:03:08 PM[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m [2m[console.error] [22mError: Invalid Firebase token: Token used too early, 1778176988 < 1778176989. Check that your computer's clock is set correctly.
+    at parseResponse (http://localhost:5174/src/services/api.js:94:17)
+    at async request (http://localhost:5174/src/services/api.js:110:11)
+    at async getOptional (http://localhost:5174/src/services/dashboardService.js:13:10)
+    at async Promise.all (index 0)
+    at async getDashboardData (http://localhost:5174/src/services/dashboardService.js:20:66)
+    at async http://localhost:5174/src/pages/Dashboard.jsx:168:17
+[2m11:03:24 PM[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m [2m[console.error] [22mAPI network/CORS error for /api: Error: Internal Server Error
+    at parseResponse (http://localhost:5174/src/services/api.js:94:17)
+    at async request (http://localhost:5174/src/services/api.js:110:11)
+    at async createStudentProfile (http://localhost:5174/src/services/profileService.js:10:19)
+    at async saveStudentProfile (http://localhost:5174/src/services/profileService.js:19:10)
+    at async handleSaveProfile (http://localhost:5174/src/pages/ProfileSetup.jsx:421:4)
+    at async handleGenerateRecommendations (http://localhost:5174/src/pages/ProfileSetup.jsx:434:17)
+[2m11:03:24 PM[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m [2m[console.error] [22mAPI network/CORS error for http://127.0.0.1:8000: TypeError: Failed to fetch
+    at request (http://localhost:5174/src/services/api.js:109:27)
+    at async createStudentProfile (http://localhost:5174/src/services/profileService.js:10:19)
+    at async saveStudentProfile (http://localhost:5174/src/services/profileService.js:19:10)
+    at async handleSaveProfile (http://localhost:5174/src/pages/ProfileSetup.jsx:421:4)
+    at async handleGenerateRecommendations (http://localhost:5174/src/pages/ProfileSetup.jsx:434:17)
+[2m11:03:24 PM[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m [2m[console.error] [22mAPI network/CORS error for http://localhost:8000: TypeError: Failed to fetch
+    at request (http://localhost:5174/src/services/api.js:109:27)
+    at async createStudentProfile (http://localhost:5174/src/services/profileService.js:10:19)
+    at async saveStudentProfile (http://localhost:5174/src/services/profileService.js:19:10)
+    at async handleSaveProfile (http://localhost:5174/src/pages/ProfileSetup.jsx:421:4)
+    at async handleGenerateRecommendations (http://localhost:5174/src/pages/ProfileSetup.jsx:434:17)
+[2m11:03:24 PM[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m [2m[console.error] [22mError: Cannot connect to the backend API. Make sure FastAPI is running on http://127.0.0.1:8000 and http://localhost:8000, then restart frontend/backend after CORS changes.
+    at request (http://localhost:5174/src/services/api.js:119:23)
+    at async createStudentProfile (http://localhost:5174/src/services/profileService.js:10:19)
+    at async saveStudentProfile (http://localhost:5174/src/services/profileService.js:19:10)
+    at async handleSaveProfile (http://localhost:5174/src/pages/ProfileSetup.jsx:421:4)
+    at async handleGenerateRecommendations (http://localhost:5174/src/pages/ProfileSetup.jsx:434:17)
+[2m11:03:33 PM[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m [2m[console.error] [22mBackend sync failed: Error: Invalid Firebase token: Token used too early, 1778177013 < 1778177014. Check that your computer's clock is set correctly.
+    at parseResponse (http://localhost:5174/src/services/api.js:94:17)
+    at async request (http://localhost:5174/src/services/api.js:110:11)
+    at async http://localhost:5174/src/components/ProtectedRoute.jsx:32:6
+[2m11:54:11 PM[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m [2m[console.error] [22mFirebase reload failed: FirebaseError: Firebase: Error (auth/network-request-failed).
+    at createErrorInternal (http://localhost:5174/node_modules/.vite/deps/firebase_auth.js?v=abe4b775:434:35)
+    at _fail (http://localhost:5174/node_modules/.vite/deps/firebase_auth.js?v=abe4b775:408:8)
+    at _performFetchWithErrorHandling (http://localhost:5174/node_modules/.vite/deps/firebase_auth.js?v=abe4b775:762:3)
+    at async _logoutIfInvalidated (http://localhost:5174/node_modules/.vite/deps/firebase_auth.js?v=abe4b775:1056:10)
+    at async _reloadWithoutSaving (http://localhost:5174/node_modules/.vite/deps/firebase_auth.js?v=abe4b775:1184:19)
+    at async reload (http://localhost:5174/node_modules/.vite/deps/firebase_auth.js?v=abe4b775:1216:2)
+    at async http://localhost:5174/src/components/ProtectedRoute.jsx:23:6
+[2m11:54:27 PM[22m [31m[1m[vite][22m[39m [31m[2m(client)[22m[39m [2m[console.error] [22mBackend sync failed: FirebaseError: Firebase: Error (auth/network-request-failed).
+    at createErrorInternal (http://localhost:5174/node_modules/.vite/deps/firebase_auth.js?v=abe4b775:434:35)
+    at _fail (http://localhost:5174/node_modules/.vite/deps/firebase_auth.js?v=abe4b775:408:8)
+    at _performFetchWithErrorHandling (http://localhost:5174/node_modules/.vite/deps/firebase_auth.js?v=abe4b775:762:3)
+    at async requestStsToken (http://localhost:5174/node_modules/.vite/deps/firebase_auth.js?v=abe4b775:1252:19)
+    at async StsTokenManager.refresh (http://localhost:5174/node_modules/.vite/deps/firebase_auth.js?v=abe4b775:1334:52)
+    at async StsTokenManager.getToken (http://localhost:5174/node_modules/.vite/deps/firebase_auth.js?v=abe4b775:1325:4)
+    at async _logoutIfInvalidated (http://localhost:5174/node_modules/.vite/deps/firebase_auth.js?v=abe4b775:1056:10)
+    at async UserImpl.getIdToken (http://localhost:5174/node_modules/.vite/deps/firebase_auth.js?v=abe4b775:1418:23)
+    at async buildRequestConfig (http://localhost:5174/src/services/api.js:64:17)
+    at async request (http://localhost:5174/src/services/api.js:102:17)
