@@ -7,7 +7,15 @@ from openai import APIConnectionError, APIStatusError, APITimeoutError, OpenAI
 load_dotenv()
 
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
-OPENROUTER_MODEL = os.getenv("OPENROUTER_MODEL", "nvidia/nemotron-3.5-lightning:free")
+OPENROUTER_MODEL = os.getenv("OPENROUTER_MODEL", "meta-llama/llama-3.3-70b-instruct:free")
+# A named free model gives the chatbot consistent quality.  The free router is
+# intentionally the fallback: it can select another currently available free
+# model when the preferred provider is busy or rate-limited.
+OPENROUTER_FALLBACK_MODELS = tuple(
+    model.strip()
+    for model in os.getenv("OPENROUTER_FALLBACK_MODELS", "openrouter/free").split(",")
+    if model.strip()
+)
 OPENROUTER_BASE_URL = os.getenv("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1")
 CHATBOT_TIMEOUT_SECONDS = float(os.getenv("CHATBOT_TIMEOUT_SECONDS", "20"))
 CHATBOT_MAX_TOKENS = int(os.getenv("CHATBOT_MAX_TOKENS", "700"))
@@ -129,6 +137,19 @@ def ask_career_chatbot(user_message: str, context: str):
         )
 
     try:
+        fallback_models = [
+            model for model in OPENROUTER_FALLBACK_MODELS
+            if model != OPENROUTER_MODEL
+        ]
+        extra_body = {
+            # Keep responses short and avoid slow, hidden reasoning for chat.
+            "reasoning": {"enabled": False},
+        }
+        if fallback_models:
+            # OpenRouter retries these models when the primary provider is
+            # unavailable or rate-limited.
+            extra_body["models"] = fallback_models
+
         completion = client.chat.completions.create(
             model=OPENROUTER_MODEL,
             extra_headers={
@@ -169,8 +190,7 @@ Student Question:
             temperature=0.35,
             max_tokens=CHATBOT_MAX_TOKENS,
             timeout=CHATBOT_TIMEOUT_SECONDS,
-            # The selected model supports direct replies without a reasoning pass.
-            extra_body={"reasoning": {"enabled": False}},
+            extra_body=extra_body,
         )
 
     except APITimeoutError as error:
@@ -190,7 +210,7 @@ Student Question:
             OPENROUTER_MODEL, error.status_code,
         )
         if error.status_code == 429:
-            detail = "The AI assistant is busy or has reached its usage limit. Please try again later."
+            detail = "All free AI providers are busy or have reached their temporary limit. Please try again shortly."
         elif error.status_code in (401, 402, 403, 404):
             detail = "The AI assistant is unavailable because of a provider configuration issue. Please contact the administrator."
         else:

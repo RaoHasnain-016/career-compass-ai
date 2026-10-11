@@ -66,7 +66,8 @@ if previews are required. Secrets belong in server environment variables.
 | `DATABASE_AUTO_CREATE` | `false` (also the default when Vercel sets `VERCEL=1`) |
 | `FIREBASE_CREDENTIALS_JSON` | Complete contents of the existing Firebase service-account JSON file |
 | `OPENROUTER_API_KEY` | Existing backend OpenRouter key |
-| `OPENROUTER_MODEL` | `nvidia/nemotron-3.5-lightning:free` |
+| `OPENROUTER_MODEL` | `meta-llama/llama-3.3-70b-instruct:free` |
+| `OPENROUTER_FALLBACK_MODELS` | `openrouter/free` |
 | `OPENROUTER_BASE_URL` | `https://openrouter.ai/api/v1` |
 | `CHATBOT_TIMEOUT_SECONDS` | `20` |
 | `CHATBOT_MAX_TOKENS` | `700` |

@@ -75,6 +75,10 @@ class ChatbotServiceTests(unittest.TestCase):
         )
         self.assertIn("What should I learn first?", user_messages)
         self.assertIn("Student is interested in software development.", user_messages)
+        self.assertIn(
+            "openrouter/free",
+            self.create.call_args.kwargs["extra_body"]["models"],
+        )
 
     def test_unconfigured_provider_is_unavailable_without_making_a_request(self):
         for key in (None, "", "YOUR_OPENROUTER_API_KEY"):

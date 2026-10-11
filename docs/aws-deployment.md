@@ -15,6 +15,6 @@ After the initial setup, the EC2 server securely checks the public GitHub reposi
 
 ## Production parameter fields
 
-The encrypted Systems Manager parameter contains these fields only: `DATABASE_URL`, `OPENROUTER_API_KEY`, `OPENROUTER_MODEL`, `OPENROUTER_BASE_URL`, `FIREBASE_CREDENTIALS_JSON`, `APP_SITE_URL`, `CHATBOT_TIMEOUT_SECONDS`, and `CHATBOT_MAX_TOKENS`.
+The encrypted Systems Manager parameter contains these fields only: `DATABASE_URL`, `OPENROUTER_API_KEY`, `OPENROUTER_MODEL`, `OPENROUTER_FALLBACK_MODELS`, `OPENROUTER_BASE_URL`, `FIREBASE_CREDENTIALS_JSON`, `APP_SITE_URL`, `CHATBOT_TIMEOUT_SECONDS`, and `CHATBOT_MAX_TOKENS`.
 
 Do not place these values in GitHub, source files, the release archive, or EC2 user data.
