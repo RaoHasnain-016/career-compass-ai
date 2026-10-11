@@ -174,10 +174,7 @@ def ask_career_chatbot(user_message: str, context: str):
             model for model in OPENROUTER_FALLBACK_MODELS
             if model != OPENROUTER_MODEL
         ]
-        extra_body = {
-            # Keep responses short and avoid slow, hidden reasoning for chat.
-            "reasoning": {"enabled": False},
-        }
+        extra_body = {}
         if fallback_models:
             # OpenRouter retries these models when the primary provider is
             # unavailable or rate-limited.
