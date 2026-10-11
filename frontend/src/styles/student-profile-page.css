@@ -75,6 +75,7 @@
 .profile-info-grid dd {
   margin: 0;
   font-weight: 800;
+  overflow-wrap: anywhere;
 }
 
 .cc-chip-list.weak span {
@@ -91,5 +92,13 @@
 
   .profile-identity-card {
     display: grid;
+  }
+
+  .profile-info-grid dl {
+    gap: 6px;
+  }
+
+  .profile-info-grid dt {
+    margin-top: 10px;
   }
 }

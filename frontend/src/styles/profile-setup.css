@@ -631,35 +631,6 @@
   line-height: 1.5;
 }
 
-.profile-floating-ai {
-  position: fixed;
-  right: 34px;
-  bottom: 34px;
-  width: 66px;
-  height: 66px;
-  border-radius: 50%;
-  display: grid;
-  place-items: center;
-  background: linear-gradient(135deg, var(--profile-primary), #0ea5e9);
-  color: #fff;
-  box-shadow: 0 20px 50px rgba(11, 103, 194, 0.35);
-  font-size: 1.5rem;
-  text-decoration: none;
-  z-index: 100;
-}
-
-.profile-floating-ai span {
-  position: absolute;
-  top: 2px;
-  right: 2px;
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
-  background: #7efba4;
-  border: 2px solid #fff;
-  animation: pulseDot 1.4s infinite;
-}
-
 .profile-setup-loading {
   min-height: 100vh;
   display: grid;
@@ -682,13 +653,6 @@
 @keyframes spinProfile {
   to {
     transform: rotate(360deg);
-  }
-}
-
-@keyframes pulseDot {
-  50% {
-    transform: scale(1.25);
-    opacity: 0.6;
   }
 }
 
@@ -835,5 +799,4 @@
   .profile-setup-header p { font-size: 0.94rem; }
   .profile-form-card { border-radius: 22px; padding: 18px; }
   .profile-form-top { padding-bottom: 18px; margin-bottom: 20px; }
-  .profile-floating-ai { width: 56px; height: 56px; right: 18px; bottom: 18px; font-size: 1.2rem; }
 }

@@ -793,28 +793,6 @@
   color: #fff;
 }
 
-.rec-floating-chatbot {
-  position: fixed;
-  right: 28px;
-  bottom: 28px;
-  width: 64px;
-  height: 64px;
-  border-radius: 22px;
-  display: grid;
-  place-items: center;
-  color: #fff;
-  text-decoration: none;
-  background: linear-gradient(135deg, var(--rec-primary), #0ea5e9);
-  box-shadow: 0 22px 48px rgba(11, 103, 194, 0.34);
-  font-size: 1.5rem;
-  z-index: 100;
-  transition: 0.25s ease;
-}
-
-.rec-floating-chatbot:hover {
-  transform: translateY(-5px) scale(1.05);
-}
-
 .recommendations-loading {
   min-height: 100vh;
   display: grid;

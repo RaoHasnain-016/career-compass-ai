@@ -730,27 +730,6 @@
   font-size: 0.84rem;
 }
 
-.dashboard-floating-ai {
-  position: fixed;
-  right: 28px;
-  bottom: 28px;
-  width: 66px;
-  height: 66px;
-  border-radius: 50%;
-  display: grid;
-  place-items: center;
-  color: white;
-  background: linear-gradient(135deg, var(--dash-primary), #0ea5e9);
-  box-shadow: 0 20px 50px rgba(11, 103, 194, 0.36);
-  z-index: 100;
-  font-size: 1.5rem;
-  transition: 0.25s ease;
-}
-
-.dashboard-floating-ai:hover {
-  transform: translateY(-5px) scale(1.06);
-}
-
 .dashboard-loading {
   min-height: 100vh;
   display: grid;

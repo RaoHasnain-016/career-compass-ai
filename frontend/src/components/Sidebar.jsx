@@ -54,9 +54,6 @@ export default function Sidebar() {
         ))}
       </nav>
 
-      <Link to="/admin" className="student-admin-link">
-        Admin Panel
-      </Link>
     </aside>
   );
 }

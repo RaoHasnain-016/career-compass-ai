@@ -118,6 +118,8 @@ export default function StudentProfile() {
           <dl>
             <dt>Age</dt>
             <dd>{profile.age || "Not added"}</dd>
+            <dt>Country / System</dt>
+            <dd>{profile.country || "Not added"}</dd>
             <dt>Academic Level</dt>
             <dd>{profile.academic_level || "Not added"}</dd>
             <dt>Class / Degree</dt>

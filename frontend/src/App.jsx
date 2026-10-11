@@ -42,10 +42,15 @@ const ManageRoadmaps = lazy(() => import("./pages/admin/ManageRoadmaps"));
 const AdminReports = lazy(() => import("./pages/admin/AdminReports"));
 
 import ProtectedRoute from "./components/ProtectedRoute";
+import AdminRoute from "./components/AdminRoute";
 import FloatingChatbotButton from "./components/FloatingChatbotButton";
 
 function protectedPage(page) {
   return <ProtectedRoute>{page}</ProtectedRoute>;
+}
+
+function adminPage(page) {
+  return <ProtectedRoute><AdminRoute>{page}</AdminRoute></ProtectedRoute>;
 }
 
 function App() {
@@ -88,12 +93,12 @@ function App() {
         <Route path="/loading" element={<SplashLoading />} />
         <Route path="/terms" element={<TermsPrivacy />} />
 
-        <Route path="/admin" element={protectedPage(<AdminDashboard />)} />
-        <Route path="/admin/users" element={protectedPage(<ManageUsers />)} />
-        <Route path="/admin/careers" element={protectedPage(<ManageCareers />)} />
-        <Route path="/admin/roadmaps" element={protectedPage(<ManageRoadmaps />)} />
-        <Route path="/admin/resources" element={protectedPage(<ManageResources />)} />
-        <Route path="/admin/reports" element={protectedPage(<AdminReports />)} />
+        <Route path="/admin" element={adminPage(<AdminDashboard />)} />
+        <Route path="/admin/users" element={adminPage(<ManageUsers />)} />
+        <Route path="/admin/careers" element={adminPage(<ManageCareers />)} />
+        <Route path="/admin/roadmaps" element={adminPage(<ManageRoadmaps />)} />
+        <Route path="/admin/resources" element={adminPage(<ManageResources />)} />
+        <Route path="/admin/reports" element={adminPage(<AdminReports />)} />
 
         <Route path="*" element={<NotFound />} />
         </Routes>
