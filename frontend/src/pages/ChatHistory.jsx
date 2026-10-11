@@ -72,8 +72,8 @@ export default function ChatHistory() {
         <div className="cc-grid">
           {history.map((item) => (
             <article className="cc-card" key={item.message_id}>
-              <h2>{item.question}</h2>
-              <p>{item.response}</p>
+              <h2 dir="auto">{item.question}</h2>
+              <p dir="auto">{item.response}</p>
             </article>
           ))}
         </div>

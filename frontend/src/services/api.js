@@ -2,7 +2,7 @@ import { auth } from "../firebase/firebase";
 
 const DEFAULT_API_BASE_URL = import.meta.env.DEV
   ? "/api"
-  : "http://127.0.0.1:8000";
+  : "";
 
 export const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL || DEFAULT_API_BASE_URL;
@@ -12,7 +12,8 @@ const FALLBACK_API_BASE_URLS = import.meta.env.DEV
   : [API_BASE_URL];
 
 function uniqueUrls(urls) {
-  return [...new Set(urls.filter(Boolean))];
+  // An empty base URL is intentional in production: it means same-origin.
+  return [...new Set(urls.filter((url) => url !== undefined && url !== null))];
 }
 
 function buildUrl(baseUrl, path) {
@@ -175,7 +176,7 @@ export async function request(path, options = {}) {
   }
 
   const networkError = new Error(
-    "Cannot connect to the backend API. Make sure FastAPI is running on http://127.0.0.1:8000 and http://localhost:8000, then restart frontend/backend after CORS changes."
+    "Cannot connect to the backend API. Make sure the Career Compass server is running and try again."
   );
 
   networkError.cause = lastNetworkError;

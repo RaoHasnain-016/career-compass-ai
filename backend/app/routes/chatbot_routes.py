@@ -14,7 +14,11 @@ from app.models.video_resource_model import VideoResource
 from app.models.saved_career_model import SavedCareer
 from app.models.chat_model import ChatMessage
 from app.schemas.chatbot_schema import ChatbotRequest
-from app.services.chatbot_service import build_chatbot_context, ask_career_chatbot
+from app.services.chatbot_service import (
+    ChatbotServiceError,
+    build_chatbot_context,
+    ask_career_chatbot,
+)
 from app.services.resource_service import find_missing_skills
 from app.utils.auth_dependency import get_current_firebase_user
 
@@ -167,10 +171,16 @@ def ask_chatbot(
         chat_history=list(reversed(chat_history)),
     )
 
-    ai_response = ask_career_chatbot(
-        user_message=request.message.strip(),
-        context=context
-    )
+    try:
+        ai_response = ask_career_chatbot(
+            user_message=request.message.strip(),
+            context=context
+        )
+    except ChatbotServiceError as error:
+        raise HTTPException(
+            status_code=error.status_code,
+            detail=error.detail,
+        ) from error
 
     chat_message = ChatMessage(
         user_id=user.user_id,

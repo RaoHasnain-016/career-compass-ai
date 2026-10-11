@@ -1,0 +1,40 @@
+.git/
+.vercel/
+**/.vercel/
+
+# Configure deployment values in Vercel instead of uploading local credentials.
+.env*
+**/.env*
+firebase-service-account.json
+**/firebase-service-account.json
+
+# Vercel installs dependencies and builds the frontend from source.
+node_modules/
+**/node_modules/
+venv/
+**/venv/
+.venv/
+**/.venv/
+dist/
+**/dist/
+__pycache__/
+**/__pycache__/
+*.pyc
+**/*.pyc
+.pytest_cache/
+**/.pytest_cache/
+.vite/
+**/.vite/
+*.log
+**/*.log
+
+# Local data and exports are migrated separately, never included in deployment.
+database/
+backups/
+**/backups/
+*.dump
+**/*.dump
+*.backup
+**/*.backup
+final.html
+lab final

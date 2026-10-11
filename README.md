@@ -41,6 +41,37 @@ pip install -r requirements.txt
 uvicorn app.main:app --reload
 ```
 
+## Run as one address
+
+Build the frontend, then start FastAPI. FastAPI serves the React build and the
+API from the same address (`http://localhost:8000`):
+
+```bash
+cd frontend
+npm install
+npm run build
+cd ../backend
+uvicorn app.main:app --host 0.0.0.0 --port 8000
+```
+
+On Windows, you can run the complete build-and-start flow with one command
+from the project root:
+
+```powershell
+.\start-one-address.ps1
+```
+
+For development, keep using `npm run dev` in `frontend`; Vite proxies `/api`
+requests to FastAPI on port 8000.
+
 ## Important
 Create your Firebase project and replace frontend/src/firebase/firebase.js config values.
 Create PostgreSQL database and update backend/.env.
+
+## Deploy on Vercel
+
+The root `vercel.json` configures the frontend and FastAPI backend as Vercel
+Services on one domain. Use the **Services** framework preset and the repository
+root. The existing local PostgreSQL database must be copied to hosted PostgreSQL.
+See [the deployment guide](docs/vercel-deployment.md) for database migration,
+environment variables, Firebase configuration and launch checks.

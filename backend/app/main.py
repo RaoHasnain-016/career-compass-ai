@@ -1,5 +1,10 @@
-from fastapi import FastAPI
+import os
+from contextlib import asynccontextmanager
+from pathlib import Path
+
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
 from sqlalchemy import text
 
 from app.database import Base, engine
@@ -30,10 +35,21 @@ from app.routes import (
 )
 
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Cloud deployments restore/migrate the database once, outside requests.
+    default_auto_create = "false" if os.getenv("VERCEL") == "1" else "true"
+    if os.getenv("DATABASE_AUTO_CREATE", default_auto_create).lower() == "true":
+        Base.metadata.create_all(bind=engine)
+        apply_startup_schema_patches()
+    yield
+
+
 app = FastAPI(
     title="Career Compass AI API",
     description="FastAPI backend for Career Compass AI",
     version="1.0.0",
+    lifespan=lifespan,
 )
 
 LOCAL_DEV_ORIGIN_REGEX = (
@@ -46,10 +62,6 @@ LOCAL_DEV_ORIGIN_REGEX = (
 )
 
 
-# Create tables automatically from models
-Base.metadata.create_all(bind=engine)
-
-
 def apply_startup_schema_patches():
     with engine.begin() as connection:
         connection.execute(
@@ -60,9 +72,6 @@ def apply_startup_schema_patches():
                 """
             )
         )
-
-
-apply_startup_schema_patches()
 
 
 # CORS setup for React/Vite frontend
@@ -87,6 +96,9 @@ app.add_middleware(
 
 @app.get("/")
 def root():
+    if os.getenv("VERCEL") != "1" and FRONTEND_INDEX.is_file():
+        return FileResponse(FRONTEND_INDEX)
+
     return {
         "message": "Career Compass AI backend is running"
     }
@@ -108,11 +120,8 @@ def db_test():
                 "database": "connected",
                 "result": result.scalar(),
             }
-    except Exception as e:
-        return {
-            "database": "not connected",
-            "error": str(e),
-        }
+    except Exception:
+        raise HTTPException(status_code=503, detail="Database is unavailable.") from None
 
 
 # Register API routes
@@ -125,3 +134,27 @@ app.include_router(roadmap_routes.router)
 app.include_router(chatbot_routes.router)
 app.include_router(saved_career_routes.router)
 app.include_router(admin_routes.router)
+
+
+# In production, serve the React build from this same FastAPI origin. This
+# keeps browser API requests same-origin and also supports React Router URLs.
+FRONTEND_DIST = Path(__file__).resolve().parents[2] / "frontend" / "dist"
+FRONTEND_INDEX = FRONTEND_DIST / "index.html"
+
+
+@app.get("/{full_path:path}", include_in_schema=False)
+def serve_frontend(full_path: str):
+    if os.getenv("VERCEL") == "1" or not FRONTEND_INDEX.is_file():
+        raise HTTPException(status_code=404, detail="Not Found")
+
+    requested_file = (FRONTEND_DIST / full_path).resolve()
+    try:
+        requested_file.relative_to(FRONTEND_DIST.resolve())
+    except ValueError:
+        raise HTTPException(status_code=404, detail="Not Found")
+
+    if requested_file.is_file():
+        return FileResponse(requested_file)
+
+    # Unknown non-API paths belong to the React SPA; React Router handles them.
+    return FileResponse(FRONTEND_INDEX)

@@ -134,7 +134,7 @@ function renderMessageContent(text) {
 
     if (isHeading(line)) {
       content.push(
-        <h3 key={`heading-${index}`}>{cleanMarkdownMarker(line)}</h3>
+        <h3 key={`heading-${index}`} dir="auto">{cleanMarkdownMarker(line)}</h3>
       );
       index += 1;
       continue;
@@ -149,7 +149,7 @@ function renderMessageContent(text) {
       }
 
       content.push(
-        <ul key={`list-${index}`}>
+        <ul key={`list-${index}`} dir="auto">
           {items.map((item, itemIndex) => (
             <li key={`${item}-${itemIndex}`}>{renderInline(item)}</li>
           ))}
@@ -167,7 +167,7 @@ function renderMessageContent(text) {
       }
 
       content.push(
-        <ol key={`steps-${index}`}>
+        <ol key={`steps-${index}`} dir="auto">
           {items.map((item, itemIndex) => (
             <li key={`${item}-${itemIndex}`}>{renderInline(item)}</li>
           ))}
@@ -189,7 +189,7 @@ function renderMessageContent(text) {
     }
 
     content.push(
-      <p key={`paragraph-${index}`}>
+      <p key={`paragraph-${index}`} dir="auto">
         {paragraphLines.map((paragraphLine, lineIndex) => (
           <span key={`${paragraphLine}-${lineIndex}`}>
             {renderInline(paragraphLine)}
@@ -213,7 +213,7 @@ export default function Chatbot() {
     {
       role: "assistant",
       text:
-        "**Quick Answer**\nAsk me about recommendations, roadmaps, missing skills, or learning resources. I will use your Career Compass AI profile to guide you.",
+        "What would you like help with: choosing a career, learning a skill, or planning your next step? Ask in your preferred language.",
       id: "welcome",
       createdAt: new Date().toISOString(),
     },
@@ -252,7 +252,7 @@ export default function Chatbot() {
 
   const sendMessage = async (text = input) => {
     const trimmed = text.trim();
-    if (!trimmed || sending) return;
+    if (!trimmed || sending || loadingHistory) return;
 
     const startedAt = performance.now();
     const userMessage = {
@@ -287,13 +287,14 @@ export default function Chatbot() {
       ]);
     } catch (error) {
       console.error(error);
-      setError(error.message || "AI response could not be loaded.");
+      const errorMessage = error.message || "AI response could not be loaded. Please try again.";
+      setError(errorMessage);
+      setInput((current) => current || trimmed);
       setMessages((prev) => [
         ...prev,
         {
           role: "assistant",
-          text:
-            "**Connection Issue**\n- I could not reach the AI service right now.\n- Check that the backend is running.\n- Retry after your profile and recommendations are available.",
+          text: errorMessage,
           id: `assistant-error-${Date.now()}`,
           createdAt: new Date().toISOString(),
         },
@@ -381,7 +382,7 @@ export default function Chatbot() {
                       </small>
                     </div>
 
-                    <div className="chat-content">
+                    <div className="chat-content" dir="auto">
                       {renderMessageContent(message.text)}
                     </div>
                   </div>
@@ -401,7 +402,7 @@ export default function Chatbot() {
                 <div className="chat-bubble typing-bubble">
                   <div className="chat-meta">
                     <strong>Career Compass AI</strong>
-                    <small>thinking</small>
+                    <small>replying</small>
                   </div>
                   <div className="typing-dots" aria-label="Assistant is typing">
                     <span></span>
@@ -422,18 +423,24 @@ export default function Chatbot() {
             }}
           >
             <textarea
+              dir="auto"
               value={input}
               onChange={(event) => setInput(event.target.value)}
-              placeholder="Ask about careers, skill gaps, roadmaps, or resources..."
+              placeholder="Ask about careers in your preferred language..."
               rows={1}
               onKeyDown={(event) => {
-                if (event.key === "Enter" && !event.shiftKey) {
+                if (
+                  event.key === "Enter" &&
+                  !event.shiftKey &&
+                  !event.nativeEvent.isComposing &&
+                  event.nativeEvent.keyCode !== 229
+                ) {
                   event.preventDefault();
                   sendMessage();
                 }
               }}
             />
-            <button type="submit" disabled={sending || !input.trim()} title="Send message">
+            <button type="submit" disabled={loadingHistory || sending || !input.trim()} title="Send message">
               <FaPaperPlane />
             </button>
           </form>
@@ -449,7 +456,7 @@ export default function Chatbot() {
                   key={question.text}
                   type="button"
                   onClick={() => sendMessage(question.text)}
-                  disabled={sending}
+                  disabled={loadingHistory || sending}
                 >
                   <span>{question.icon}</span>
                   <div>

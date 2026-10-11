@@ -18,3 +18,10 @@ frontend/.env.local
 
 .vscode/
 .DS_Store
+
+# Deployment state, private environment overrides and database backups
+.vercel/
+.env.*
+!.env.example
+database/backups/
+*.dump

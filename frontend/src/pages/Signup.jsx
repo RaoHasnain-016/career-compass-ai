@@ -30,10 +30,18 @@ function getSignupErrorMessage(error) {
       return "Password should be at least 6 characters.";
     case "auth/popup-closed-by-user":
       return "Google popup was closed before completing signup.";
+    case "auth/popup-blocked":
+      return "Your browser blocked the Google sign-in popup. Allow popups for this site and try again.";
+    case "auth/unauthorized-domain":
+      return "Google sign-in is not enabled for this address. Open the app using http://localhost:8000 or add this domain in Firebase Authentication settings.";
+    case "auth/operation-not-allowed":
+      return "Google sign-in is disabled. Enable the Google provider in Firebase Authentication settings.";
+    case "auth/network-request-failed":
+      return "Google sign-in could not connect. Check your internet connection and try again.";
     case "auth/too-many-requests":
       return "Too many requests. Please wait a few minutes and try again.";
     default:
-      return "Signup failed. Please try again.";
+      return error?.message || "Signup failed. Please try again.";
   }
 }
 
