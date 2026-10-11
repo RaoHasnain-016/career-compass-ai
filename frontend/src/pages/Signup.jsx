@@ -14,7 +14,6 @@ import {
   FaEnvelope,
   FaLock,
   FaUser,
-  FaUserTag,
 } from "react-icons/fa";
 import { auth, googleProvider } from "../firebase/firebase";
 import { syncFirebaseUser } from "../services/authService";
@@ -50,7 +49,6 @@ function Signup() {
 
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
-  const [role, setRole] = useState("Student");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [agree, setAgree] = useState(false);
@@ -116,11 +114,6 @@ function Signup() {
       return false;
     }
 
-    if (!role) {
-      setError("Please select your role.");
-      return false;
-    }
-
     if (!agree) {
       setError("Please agree to the Terms and Privacy Policy.");
       return false;
@@ -150,7 +143,7 @@ function Signup() {
 
       await result.user.reload();
 
-      localStorage.setItem("selectedRole", role);
+      localStorage.setItem("selectedRole", "Student");
       localStorage.setItem("signupName", fullName.trim());
       localStorage.setItem("signupEmail", email.trim());
 
@@ -187,7 +180,7 @@ function Signup() {
 
       const result = await signInWithPopup(auth, googleProvider);
 
-      localStorage.setItem("selectedRole", role);
+      localStorage.setItem("selectedRole", "Student");
 
       await syncFirebaseUser(result.user);
 
@@ -313,21 +306,8 @@ function Signup() {
                   </div>
                 </div>
 
-                <div className="signup-field">
-                  <label>Role</label>
-                  <div className="signup-input-wrap signup-select-wrap">
-                    <span className="signup-input-icon">
-                      <FaUserTag />
-                    </span>
-                    <select
-                      value={role}
-                      onChange={(e) => setRole(e.target.value)}
-                    >
-                      <option value="Student">Student</option>
-                      <option value="Mentor">Mentor</option>
-                      <option value="Counselor">Counselor</option>
-                    </select>
-                  </div>
+                <div className="signup-student-note">
+                  This is a student account. Your academic stage and country are collected in the next step.
                 </div>
 
                 <label className="signup-check">

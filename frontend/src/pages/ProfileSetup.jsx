@@ -21,22 +21,10 @@ import {
   getStudentProfile,
   saveStudentProfile,
 } from "../services/profileService";
+import { countryOptions, educationOptionsFor } from "../data/educationCatalog";
 import "../styles/profile-setup.css";
 
 const DRAFT_KEY = "careerCompassProfileDraft";
-
-const subjects = [
-  "Computer Science",
-  "Mathematics",
-  "Biology",
-  "Chemistry",
-  "Physics",
-  "English",
-  "Business Studies",
-  "Economics",
-  "Arts",
-  "Statistics",
-];
 
 const interestOptions = [
   "Technology",
@@ -90,6 +78,7 @@ const steps = [
 
 const initialForm = {
   age: "",
+  country: "",
   academic_level: "",
   class_degree: "",
   marks_cgpa: "",
@@ -138,6 +127,7 @@ function parseStudyPreference(value = "") {
     career_goal_timeline: "",
     education_stream: "",
     current_institution: "",
+    country: "",
   };
 
   parts.slice(1).forEach((part) => {
@@ -165,6 +155,10 @@ function parseStudyPreference(value = "") {
       parsed.current_institution = part
         .replace(/current institution:/i, "")
         .trim();
+    }
+
+    if (lower.startsWith("country:")) {
+      parsed.country = part.replace(/country:/i, "").trim();
     }
   });
 
@@ -209,6 +203,7 @@ function ProfileSetup() {
   const completion = useMemo(() => {
     const checks = [
       Boolean(form.age),
+      Boolean(form.country),
       Boolean(form.academic_level),
       Boolean(form.class_degree),
       Boolean(form.marks_cgpa),
@@ -237,6 +232,11 @@ function ProfileSetup() {
     return skillOptions.filter((skill) => skill.toLowerCase().includes(query));
   }, [skillSearch]);
 
+  const educationCatalog = useMemo(
+    () => educationOptionsFor(form.country),
+    [form.country]
+  );
+
   useEffect(() => {
     async function loadProfile() {
       try {
@@ -248,6 +248,7 @@ function ProfileSetup() {
         setForm({
           ...initialForm,
           age: profile?.age || "",
+          country: profile?.country || parsedPreference.country,
           academic_level: profile?.academic_level || "",
           class_degree: profile?.class_degree || "",
           marks_cgpa: profile?.marks_cgpa || "",
@@ -337,8 +338,8 @@ function ProfileSetup() {
 
   const validateStep = (targetStep = step) => {
     if (targetStep === 1) {
-      if (!form.age || !form.academic_level || !form.class_degree || !form.marks_cgpa) {
-        return "Please complete age, academic level, class/degree, and marks/CGPA.";
+      if (!form.age || !form.country || !form.academic_level || !form.class_degree || !form.marks_cgpa) {
+        return "Please complete age, country, academic level, class/degree, and marks/CGPA.";
       }
 
       if (Number(form.age) < 10 || Number(form.age) > 80) {
@@ -455,10 +456,12 @@ function ProfileSetup() {
       form.current_institution
         ? `Current institution: ${form.current_institution}`
         : "",
+      form.country ? `Country: ${form.country}` : "",
     ].filter(Boolean);
 
     return {
       age: String(form.age || ""),
+      country: form.country,
       academic_level: form.academic_level,
       class_degree: form.class_degree,
       marks_cgpa: Number(form.marks_cgpa) || 0,
@@ -682,21 +685,42 @@ function ProfileSetup() {
                     <label>Academic Level</label>
                     <select
                       value={form.academic_level}
+                      disabled={!form.country}
                       onChange={(e) =>
                         updateField("academic_level", e.target.value)
                       }
                     >
-                      <option value="">Select your level</option>
-                      <option value="Matric">Matric</option>
-                      <option value="Intermediate">Intermediate</option>
-                      <option value="Bachelor">Bachelor</option>
-                      <option value="Master">Master</option>
-                      <option value="Other">Other</option>
+                      <option value="">{form.country ? "Select your level" : "Select country first"}</option>
+                      {educationCatalog.levels.map((level) => (
+                        <option key={level} value={level}>{level}</option>
+                      ))}
                     </select>
                   </div>
 
                   <div className="setup-field">
-                    <label>Class / Current Degree</label>
+                    <label>Country / education system</label>
+                    <select
+                      value={form.country}
+                      onChange={(e) =>
+                        setForm((prev) => ({
+                          ...prev,
+                          country: e.target.value,
+                          academic_level: "",
+                          education_stream: "",
+                          favorite_subjects: [],
+                          weak_subjects: [],
+                        }))
+                      }
+                    >
+                      <option value="">Select your country</option>
+                      {countryOptions.map((country) => (
+                        <option key={country} value={country}>{country}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="setup-field">
+                    <label>{form.academic_level ? `Current ${form.academic_level} class or programme` : "Class / Current Degree"}</label>
                     <input
                       type="text"
                       placeholder="e.g. BS Computer Science"
@@ -720,23 +744,17 @@ function ProfileSetup() {
                   </div>
 
                   <div className="setup-field">
-                    <label>Education Stream</label>
+                    <label>Academic stream / pathway</label>
                     <select
                       value={form.education_stream}
                       onChange={(e) =>
                         updateField("education_stream", e.target.value)
                       }
                     >
-                      <option value="">Select stream</option>
-                      <option value="Science & Technology">
-                        Science & Technology
-                      </option>
-                      <option value="Pre Medical">Pre Medical</option>
-                      <option value="Pre Engineering">Pre Engineering</option>
-                      <option value="Commerce & Management">
-                        Commerce & Management
-                      </option>
-                      <option value="Humanities & Arts">Humanities & Arts</option>
+                      <option value="">Select your pathway</option>
+                      {(educationCatalog.streams[form.academic_level] || ["General / exploring options"]).map((stream) => (
+                        <option key={stream} value={stream}>{stream}</option>
+                      ))}
                     </select>
                   </div>
 
@@ -758,10 +776,10 @@ function ProfileSetup() {
                 <div className="subject-section">
                   <div>
                     <h3>Favorite Subjects</h3>
-                    <p>Select subjects you enjoy and perform well in.</p>
+                    <p>Select subjects available in your education system that you enjoy and perform well in.</p>
 
                     <div className="chip-grid">
-                      {subjects.map((subject) => (
+                      {educationCatalog.subjects.map((subject) => (
                         <button
                           type="button"
                           key={`fav-${subject}`}
@@ -785,7 +803,7 @@ function ProfileSetup() {
                     <p>Select subjects where you need improvement.</p>
 
                     <div className="chip-grid">
-                      {subjects.map((subject) => (
+                      {educationCatalog.subjects.map((subject) => (
                         <button
                           type="button"
                           key={`weak-${subject}`}
@@ -961,6 +979,7 @@ function ProfileSetup() {
                     <p>{form.class_degree || "Degree not added"}</p>
                     <p>Marks/CGPA: {form.marks_cgpa || "N/A"}</p>
                     <p>Stream: {form.education_stream || "N/A"}</p>
+                    <p>Country: {form.country || "N/A"}</p>
                     <p>Institution: {form.current_institution || "N/A"}</p>
                   </div>
 

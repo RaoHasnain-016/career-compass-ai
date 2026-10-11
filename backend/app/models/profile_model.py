@@ -12,6 +12,7 @@ class StudentProfile(Base):
     user_id = Column(UUID(as_uuid=True), ForeignKey("users.user_id"), unique=True, nullable=False)
 
     age = Column(String(10), nullable=True)
+    country = Column(String(80), nullable=True)
     academic_level = Column(String(50), nullable=False)
     class_degree = Column(String(100), nullable=True)
     marks_cgpa = Column(Numeric(5, 2), nullable=True)

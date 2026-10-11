@@ -468,3 +468,14 @@
     font-size: 1.9rem;
   }
 }
+
+.signup-student-note {
+  margin: 4px 0 18px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: #eff6ff;
+  color: #1e3a5f;
+  font-size: 0.9rem;
+  font-weight: 700;
+  line-height: 1.5;
+}

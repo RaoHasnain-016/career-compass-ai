@@ -547,6 +547,19 @@
 }
 
 @media (max-width: 520px) {
+  .chatbot-page { gap: 14px; }
+  .chat-hero { padding: 16px; gap: 12px; border-radius: 20px; }
+  .chat-bot-mark { width: 54px; height: 54px; border-radius: 17px; }
+  .chat-bot-mark svg { font-size: 1.35rem; }
+  .chat-hero h1 { font-size: 1.65rem; }
+  .chat-hero p { font-size: 0.92rem; }
+  .chat-panel { min-height: 440px; border-radius: 20px; }
+  .chat-history { height: 48vh; min-height: 320px; padding: 14px; }
+  .chat-message { gap: 9px; }
+  .chat-avatar { width: 34px; height: 34px; font-size: 0.85rem; }
+  .chat-bubble { padding: 13px; }
+  .chat-input-row { padding: 12px; }
+
   .chat-input-row {
     grid-template-columns: 1fr;
   }

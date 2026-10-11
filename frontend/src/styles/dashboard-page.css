@@ -831,6 +831,22 @@
 }
 
 @media (max-width: 600px) {
+  .dashboard-sidebar { padding: 14px 0 10px; gap: 10px; overflow: hidden; }
+  .dashboard-brand { margin: 0; padding: 0 16px; }
+  .dashboard-brand small { display: none; }
+  .dashboard-nav { flex-direction: row; width: 100%; overflow-x: auto; padding: 0 16px 5px; scrollbar-width: none; }
+  .dashboard-nav::-webkit-scrollbar { display: none; }
+  .dashboard-nav a { flex: 0 0 auto; width: auto; padding: 9px 11px; font-size: 0.82rem; }
+  .dashboard-pro-card, .logout-btn { display: none; }
+  .dashboard-topbar { height: 58px; }
+  .dashboard-user-area { gap: 10px; }
+  .dashboard-user-area img { width: 36px; height: 36px; }
+  .dashboard-content { padding: 18px 14px 88px; }
+  .dashboard-hero h1 { font-size: 1.7rem; }
+  .summary-card, .chart-card, .ai-insight-card, .roadmap-card, .activity-card { border-radius: 20px; }
+  .summary-card { min-height: 170px; }
+  .chart-card { padding: 18px 10px; overflow: hidden; }
+
   .summary-grid,
   .resource-grid {
     grid-template-columns: 1fr;

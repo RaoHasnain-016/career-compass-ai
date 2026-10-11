@@ -14,6 +14,8 @@ CREATE TABLE users (
 CREATE TABLE student_profiles (
   profile_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   user_id UUID UNIQUE REFERENCES users(user_id),
+  age VARCHAR(10),
+  country VARCHAR(80),
   academic_level VARCHAR(50) NOT NULL,
   class_degree VARCHAR(100),
   marks_cgpa NUMERIC(5,2),

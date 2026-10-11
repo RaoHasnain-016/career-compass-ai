@@ -41,7 +41,7 @@ async def lifespan(app: FastAPI):
     default_auto_create = "false" if os.getenv("VERCEL") == "1" else "true"
     if os.getenv("DATABASE_AUTO_CREATE", default_auto_create).lower() == "true":
         Base.metadata.create_all(bind=engine)
-        apply_startup_schema_patches()
+    apply_startup_schema_patches()
     yield
 
 
@@ -69,6 +69,14 @@ def apply_startup_schema_patches():
                 """
                 ALTER TABLE student_profiles
                 ALTER COLUMN study_preference TYPE TEXT
+                """
+            )
+        )
+        connection.execute(
+            text(
+                """
+                ALTER TABLE student_profiles
+                ADD COLUMN IF NOT EXISTS country VARCHAR(80)
                 """
             )
         )

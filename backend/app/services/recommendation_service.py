@@ -31,6 +31,13 @@ def calculate_academic_score(profile, career):
     marks = float(profile.marks_cgpa) if profile.marks_cgpa is not None else 0
     minimum_marks = float(career.minimum_marks) if career.minimum_marks is not None else 0
 
+    level_status = academic_stage_status(profile, career)
+
+    if level_status == "foundation_stage":
+        # Keep careers visible as aspirations, but never present university or
+        # postgraduate routes as immediately available to younger learners.
+        return min(10, max((marks / 100) * 10, 0)), level_status
+
     if minimum_marks <= 0:
         return 20, "eligible"
 
@@ -46,6 +53,51 @@ def calculate_academic_score(profile, career):
         status = "below_requirement"
 
     return round(academic_score, 2), status
+
+
+def academic_stage_status(profile, career):
+    level = str(profile.academic_level or "").lower()
+    required = str(career.required_education or "").lower()
+
+    school_levels = ("matric", "secondary", "high school", "class 9", "middle")
+    senior_levels = ("intermediate", "senior secondary", "sixth form", "a level", "high school senior")
+    undergraduate_levels = ("bachelor", "undergraduate")
+
+    if any(item in level for item in school_levels) and any(
+        item in required for item in ("intermediate", "bachelor", "degree", "mbbs", "master")
+    ):
+        return "foundation_stage"
+    if any(item in level for item in senior_levels) and any(
+        item in required for item in ("bachelor", "degree", "mbbs", "master")
+    ):
+        return "foundation_stage"
+    if any(item in level for item in undergraduate_levels) and "master" in required:
+        return "foundation_stage"
+    return "eligible"
+
+
+def stage_guidance(profile, career):
+    level = str(profile.academic_level or "").lower()
+    country = str(getattr(profile, "country", "") or "your country")
+
+    if any(item in level for item in ("matric", "secondary", "high school", "class 9", "middle")):
+        return (
+            f"At your current school stage in {country}, focus on core subjects, explore {career.field} through safe beginner projects, "
+            "and choose the next senior-secondary pathway that keeps this career open."
+        )
+    if any(item in level for item in ("intermediate", "senior secondary", "sixth form", "a level", "high school senior")):
+        return (
+            f"At your senior-secondary stage in {country}, strengthen admission-relevant subjects, build a small portfolio, "
+            f"and research entry requirements for {career.title}."
+        )
+    if "master" in level or "postgraduate" in level or "graduate" in level:
+        return (
+            f"At your postgraduate stage in {country}, focus on specialisation, research or advanced projects, "
+            "professional networks, and work-ready evidence."
+        )
+    return (
+        f"At your current stage in {country}, combine relevant coursework with projects, internships, and a portfolio for {career.title}."
+    )
 
 
 def calculate_preference_score(profile, career):
@@ -127,6 +179,7 @@ def generate_recommendation_analysis(profile, career):
     confidence_level = get_confidence_level(total_score)
 
     explanation = generate_human_explanation(
+        profile=profile,
         career=career,
         score=total_score,
         confidence_level=confidence_level,
@@ -139,6 +192,7 @@ def generate_recommendation_analysis(profile, career):
     )
 
     improvement_advice = generate_improvement_advice(
+        profile=profile,
         career=career,
         missing_skills=missing_skills,
         missing_subjects=missing_subjects,
@@ -161,6 +215,7 @@ def generate_recommendation_analysis(profile, career):
 
 
 def generate_human_explanation(
+    profile,
     career,
     score,
     confidence_level,
@@ -181,6 +236,8 @@ def generate_human_explanation(
         parts.append(
             "Your academic performance meets the basic requirement for this career."
         )
+    elif eligibility_status == "foundation_stage":
+        parts.append(stage_guidance(career=career, profile=profile))
     elif eligibility_status == "near_eligible":
         parts.append(
             "Your academic performance is close to the required level, so this career is still possible with improvement."
@@ -219,6 +276,7 @@ def generate_human_explanation(
 
 
 def generate_improvement_advice(
+    profile,
     career,
     missing_skills,
     missing_subjects,
@@ -226,7 +284,9 @@ def generate_improvement_advice(
 ):
     advice = []
 
-    if eligibility_status == "below_requirement":
+    if eligibility_status == "foundation_stage":
+        advice.append(stage_guidance(profile=profile, career=career))
+    elif eligibility_status == "below_requirement":
         advice.append(
             "Improve your academic performance before choosing this path as a primary option."
         )
