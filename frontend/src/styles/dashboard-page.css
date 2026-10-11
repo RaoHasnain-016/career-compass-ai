@@ -27,8 +27,8 @@
 .dashboard-sidebar {
   position: fixed;
   inset: 0 auto 0 0;
-  width: 270px;
-  padding: 22px 18px;
+  width: 248px;
+  padding: 20px 16px;
   background: rgba(255, 255, 255, 0.92);
   backdrop-filter: blur(18px);
   border-right: 1px solid var(--dash-border);
@@ -43,7 +43,7 @@
   align-items: center;
   color: var(--dash-text);
   text-decoration: none;
-  margin-bottom: 32px;
+  margin-bottom: 24px;
 }
 
 .dashboard-brand > span {
@@ -138,15 +138,15 @@
 }
 
 .dashboard-main {
-  margin-left: 270px;
+  margin-left: 248px;
   min-height: 100vh;
 }
 
 .dashboard-topbar {
   position: sticky;
   top: 0;
-  height: 70px;
-  padding: 0 34px;
+  height: 64px;
+  padding: 0 28px;
   background: rgba(255, 255, 255, 0.8);
   backdrop-filter: blur(18px);
   border-bottom: 1px solid var(--dash-border);
@@ -202,12 +202,12 @@
 .dashboard-content {
   max-width: 1450px;
   margin: 0 auto;
-  padding: 34px;
+  padding: 28px;
 }
 
 .dashboard-hero h1 {
   margin: 0 0 8px;
-  font-size: clamp(2.1rem, 4vw, 3.2rem);
+  font-size: clamp(1.9rem, 3vw, 2.6rem);
   letter-spacing: -0.04em;
   font-weight: 950;
 }
@@ -215,7 +215,7 @@
 .dashboard-hero p {
   margin: 0;
   color: var(--dash-muted);
-  font-size: 1.1rem;
+  font-size: 1rem;
 }
 
 .dashboard-warning {
@@ -249,7 +249,7 @@
 .dashboard-empty-state {
   margin-top: 22px;
   padding: 22px;
-  border-radius: 24px;
+  border-radius: 18px;
   background: var(--dash-card);
   border: 1px solid rgba(255, 255, 255, 0.8);
   box-shadow: var(--dash-shadow);
@@ -260,10 +260,10 @@
 }
 
 .dashboard-empty-state > svg {
-  width: 50px;
-  height: 50px;
+  width: 42px;
+  height: 42px;
   padding: 13px;
-  border-radius: 16px;
+  border-radius: 13px;
   background: #eaf4ff;
   color: var(--dash-primary);
 }
@@ -318,7 +318,7 @@
 
 .summary-card {
   padding: 24px;
-  border-radius: 24px;
+  border-radius: 18px;
   overflow: hidden;
   position: relative;
 }
@@ -331,9 +331,9 @@
 }
 
 .summary-top .icon {
-  width: 48px;
-  height: 48px;
-  border-radius: 15px;
+  width: 42px;
+  height: 42px;
+  border-radius: 13px;
   display: grid;
   place-items: center;
 }
@@ -370,7 +370,7 @@
 
 .summary-card h2 {
   margin: 0;
-  font-size: 2.1rem;
+  font-size: 1.8rem;
 }
 
 .mini-progress {
@@ -399,7 +399,7 @@
 .chart-card,
 .roadmap-card,
 .activity-card {
-  border-radius: 30px;
+  border-radius: 20px;
   padding: 28px;
 }
 
@@ -417,7 +417,7 @@
 .chart-card h2,
 .activity-card h2 {
   margin: 0;
-  font-size: 1.35rem;
+  font-size: 1.15rem;
   font-weight: 900;
 }
 
@@ -499,7 +499,7 @@
 
 .readiness-ring {
   position: relative;
-  height: 190px;
+  height: 170px;
 }
 
 .readiness-ring > div:last-child {
@@ -595,8 +595,8 @@
 }
 
 .roadmap-step > div {
-  width: 54px;
-  height: 54px;
+  width: 46px;
+  height: 46px;
   margin: 0 auto 12px;
   border-radius: 50%;
   display: grid;
@@ -633,7 +633,7 @@
 }
 
 .career-card {
-  border-radius: 22px;
+  border-radius: 18px;
   padding: 16px;
   display: flex;
   gap: 16px;
@@ -641,8 +641,8 @@
 }
 
 .career-card img {
-  width: 100px;
-  height: 90px;
+  width: 84px;
+  height: 76px;
   border-radius: 16px;
   object-fit: cover;
 }
