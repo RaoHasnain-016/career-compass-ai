@@ -835,9 +835,6 @@ function Dashboard() {
         </section>
       </main>
 
-      <Link to="/chatbot" className="dashboard-floating-ai">
-        <FaRobot />
-      </Link>
     </div>
   );
 }

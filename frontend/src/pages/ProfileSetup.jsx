@@ -1101,10 +1101,6 @@ function ProfileSetup() {
         </div>
       </main>
 
-      <Link to="/chatbot" className="profile-floating-ai">
-        <FaRobot />
-        <span></span>
-      </Link>
     </div>
   );
 }

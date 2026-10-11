@@ -745,9 +745,6 @@ function Recommendations() {
         </section>
       </main>
 
-      <Link to="/chatbot" className="rec-floating-chatbot">
-        <FaRobot />
-      </Link>
     </div>
   );
 }
