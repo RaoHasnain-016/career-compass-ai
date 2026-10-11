@@ -12,7 +12,11 @@ AWS_REGION="${AWS_REGION:?AWS_REGION must be set}"
 export DEBIAN_FRONTEND=noninteractive
 apt-get update
 apt-get install -y --no-install-recommends \
-  nginx python3.12 python3.12-venv python3-pip awscli jq ca-certificates curl git
+  nginx python3.12 python3.12-venv python3-pip jq ca-certificates curl git unzip
+curl -fsSL https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip -o /tmp/awscliv2.zip
+unzip -q /tmp/awscliv2.zip -d /tmp
+/tmp/aws/install --update
+rm -rf /tmp/aws /tmp/awscliv2.zip
 curl -fsSL https://deb.nodesource.com/setup_22.x | bash -
 apt-get install -y --no-install-recommends nodejs
 
