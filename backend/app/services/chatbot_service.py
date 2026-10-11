@@ -1,6 +1,7 @@
 import json
 import logging
 import os
+import re
 from dotenv import load_dotenv
 from openai import APIConnectionError, APIStatusError, APITimeoutError, OpenAI
 
@@ -129,6 +130,38 @@ def build_chatbot_context(
     return json.dumps(context, ensure_ascii=False, separators=(",", ":"))
 
 
+def build_resilient_career_reply(user_message: str, context: str) -> str:
+    """Return useful profile-based guidance if every free provider is capped."""
+    try:
+        data = json.loads(context)
+    except (TypeError, json.JSONDecodeError):
+        data = {}
+
+    selected = data.get("selected_career") or {}
+    recommendations = data.get("recommendations") or []
+    top_match = recommendations[0] if recommendations else {}
+    title = selected.get("title") or top_match.get("title") or "your strongest career path"
+    missing_skills = top_match.get("missing_skills") or []
+    if isinstance(missing_skills, str):
+        missing_skills = [item.strip() for item in missing_skills.split(",") if item.strip()]
+    next_skill = missing_skills[0] if missing_skills else "one practical skill for your chosen field"
+    roadmap = data.get("roadmap") or []
+    next_stage = roadmap[0].get("title") if roadmap else None
+    question = user_message.casefold()
+    words = set(re.findall(r"\w+", question, flags=re.UNICODE))
+
+    if words.intersection({"hello", "hi", "salam", "assalam"}):
+        return f"Hello! Your current top career path is {title}. Ask about skills, a roadmap, or learning resources and I will guide you."
+    if any(term in question for term in ("skill", "learn", "improve")):
+        return f"For {title}, focus first on {next_skill}. Spend 30 minutes today on one beginner lesson, then practise it in a small project."
+    if any(term in question for term in ("roadmap", "plan", "next step")):
+        action = f"Start with the {next_stage} stage" if next_stage else "Start by reviewing your recommended skills"
+        return f"{action} for {title}. Complete one focused learning task this week, then update your roadmap progress."
+    if any(term in question for term in ("career", "job", "choose", "best")):
+        return f"Based on your saved profile, {title} is your strongest current path. Review its roadmap and build one small project to test your interest before committing."
+    return f"Your current top path is {title}. The best next action is to work on {next_skill} and record your progress in the roadmap."
+
+
 
 def ask_career_chatbot(user_message: str, context: str):
     if not OPENROUTER_API_KEY or OPENROUTER_API_KEY == "YOUR_OPENROUTER_API_KEY":
@@ -210,7 +243,8 @@ Student Question:
             OPENROUTER_MODEL, error.status_code,
         )
         if error.status_code == 429:
-            detail = "All free AI providers are busy or have reached their temporary limit. Please try again shortly."
+            logger.warning("All free chatbot providers are temporarily capped; using profile guidance.")
+            return build_resilient_career_reply(user_message, context)
         elif error.status_code in (401, 402, 403, 404):
             detail = "The AI assistant is unavailable because of a provider configuration issue. Please contact the administrator."
         else:

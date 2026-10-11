@@ -124,7 +124,7 @@ class ChatbotServiceTests(unittest.TestCase):
                 self.assert_service_error(expected_status)
 
     def test_provider_status_errors_are_mapped_without_exposing_diagnostics(self):
-        for provider_status in (401, 402, 403, 404, 429, 400, 500):
+        for provider_status in (401, 402, 403, 404, 400, 500):
             with self.subTest(provider_status=provider_status):
                 error_type = RateLimitError if provider_status == 429 else APIStatusError
                 self.create.side_effect = error_type(
@@ -134,6 +134,21 @@ class ChatbotServiceTests(unittest.TestCase):
                 )
                 expected = 503 if provider_status in (401, 402, 403, 404, 429) else 502
                 self.assert_service_error(expected)
+
+    def test_rate_limit_returns_profile_based_guidance(self):
+        self.create.side_effect = RateLimitError(
+            "private-provider-diagnostic",
+            response=httpx.Response(429, request=self.request),
+            body={"error": "private-provider-diagnostic"},
+        )
+
+        answer = chatbot_service.ask_career_chatbot(
+            "Which skill should I learn?",
+            '{"selected_career":{"title":"Software Engineer"},"recommendations":[{"missing_skills":["Python"]}]}',
+        )
+
+        self.assertIn("Software Engineer", answer)
+        self.assertIn("Python", answer)
 
     def test_missing_choices_and_empty_answers_are_failures(self):
         malformed_completions = [
