@@ -86,7 +86,7 @@ Group=careercompass
 WorkingDirectory=/opt/career-compass/current/backend
 Environment=DATABASE_AUTO_CREATE=false
 Environment=PYTHONUNBUFFERED=1
-EnvironmentFile=/opt/career-compass/shared/backend.env
+EnvironmentFile=-/opt/career-compass/shared/backend.env
 ExecStartPre=/usr/local/sbin/career-compass-sync-secrets
 ExecStart=/opt/career-compass/current/venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8000 --proxy-headers
 Restart=always

@@ -5,7 +5,10 @@
       "Sid": "ReadMigrationBackup",
       "Effect": "Allow",
       "Action": "s3:GetObject",
-      "Resource": "arn:aws:s3:::career-compass-405804179013-ap-southeast-2-deploy/database/*"
+      "Resource": [
+        "arn:aws:s3:::career-compass-405804179013-ap-southeast-2-deploy/database/*",
+        "arn:aws:s3:::career-compass-405804179013-ap-southeast-2-deploy/deployments/*"
+      ]
     }
   ]
 }
