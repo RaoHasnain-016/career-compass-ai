@@ -62,8 +62,17 @@ if [ ! -d "${SOURCE_DIR}/.git" ]; then
   rm -rf "$SOURCE_DIR"
   git clone --depth 1 --branch main "$REPOSITORY" "$SOURCE_DIR"
 else
+  CURRENT_REVISION="$(git -c safe.directory="$SOURCE_DIR" -C "$SOURCE_DIR" rev-parse HEAD)"
   git -c safe.directory="$SOURCE_DIR" -C "$SOURCE_DIR" fetch --depth 1 origin main
-  git -c safe.directory="$SOURCE_DIR" -C "$SOURCE_DIR" reset --hard origin/main
+  REMOTE_REVISION="$(git -c safe.directory="$SOURCE_DIR" -C "$SOURCE_DIR" rev-parse origin/main)"
+
+  # The timer runs often so updates are quick. Do not rebuild or restart the
+  # live application unless GitHub actually has a new revision.
+  if [ "$CURRENT_REVISION" = "$REMOTE_REVISION" ]; then
+    exit 0
+  fi
+
+  git -c safe.directory="$SOURCE_DIR" -C "$SOURCE_DIR" reset --hard "$REMOTE_REVISION"
 fi
 
 cd "$SOURCE_DIR"
@@ -138,6 +147,20 @@ server {
     client_max_body_size 2m;
     proxy_connect_timeout 10s;
     proxy_read_timeout 60s;
+
+    gzip on;
+    gzip_types text/plain text/css application/javascript application/json image/svg+xml;
+
+    location ~* \.(?:css|js|mjs|svg|woff2?)$ {
+        proxy_pass http://127.0.0.1:8000;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+    }
 
     location / {
         proxy_pass http://127.0.0.1:8000;

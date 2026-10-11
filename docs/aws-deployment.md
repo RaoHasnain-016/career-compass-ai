@@ -4,7 +4,7 @@ The production system uses one EC2 server with a fixed Elastic IP, Amazon RDS fo
 
 ## What is automatic
 
-After the initial setup, the EC2 server securely checks the public GitHub repository for updates to `main`, builds the app, and restarts the service. This avoids storing AWS keys in GitHub while the project's Free plan restricts the AWS-managed CI/CD role path.
+After the initial setup, the EC2 server securely checks the public GitHub repository for updates to `main` every two minutes. It builds and restarts the service only when a new Git revision is available. This avoids storing AWS keys in GitHub while the project's Free plan restricts the AWS-managed CI/CD role path.
 
 ## One-time domain steps
 

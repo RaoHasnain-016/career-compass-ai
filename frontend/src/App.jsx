@@ -1,44 +1,45 @@
+import { lazy, Suspense } from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 
-import Landing from "./pages/Landing";
-import Login from "./pages/Login";
-import Signup from "./pages/Signup";
-import ForgotPassword from "./pages/ForgotPassword";
-import EmailVerification from "./pages/EmailVerification";
-import WelcomeOnboarding from "./pages/WelcomeOnboarding";
-import Dashboard from "./pages/Dashboard";
-import ProfileSetup from "./pages/ProfileSetup";
-import InterestSelection from "./pages/InterestSelection";
-import SkillsSelection from "./pages/SkillsSelection";
-import AssessmentSummary from "./pages/AssessmentSummary";
-import RecommendationLoading from "./pages/RecommendationLoading";
-import Recommendations from "./pages/Recommendations";
-import CareerDetail from "./pages/CareerDetail";
-import Roadmap from "./pages/Roadmap";
-import RoadmapStageDetail from "./pages/RoadmapStageDetail";
-import SkillGap from "./pages/SkillGap";
-import LearningResources from "./pages/LearningResources";
-import ResourceDetail from "./pages/ResourceDetail";
-import Chatbot from "./pages/Chatbot";
-import ChatHistory from "./pages/ChatHistory";
-import SavedCareers from "./pages/SavedCareers";
-import CompareCareers from "./pages/CompareCareers";
-import StudentProfile from "./pages/StudentProfile";
-import Settings from "./pages/Settings";
-import HelpFAQ from "./pages/HelpFAQ";
-import ContactUs from "./pages/ContactUs";
-import AboutProject from "./pages/AboutProject";
-import NoRecommendationFound from "./pages/NoRecommendationFound";
-import SplashLoading from "./pages/SplashLoading";
-import TermsPrivacy from "./pages/TermsPrivacy";
-import NotFound from "./pages/NotFound";
+const Landing = lazy(() => import("./pages/Landing"));
+const Login = lazy(() => import("./pages/Login"));
+const Signup = lazy(() => import("./pages/Signup"));
+const ForgotPassword = lazy(() => import("./pages/ForgotPassword"));
+const EmailVerification = lazy(() => import("./pages/EmailVerification"));
+const WelcomeOnboarding = lazy(() => import("./pages/WelcomeOnboarding"));
+const Dashboard = lazy(() => import("./pages/Dashboard"));
+const ProfileSetup = lazy(() => import("./pages/ProfileSetup"));
+const InterestSelection = lazy(() => import("./pages/InterestSelection"));
+const SkillsSelection = lazy(() => import("./pages/SkillsSelection"));
+const AssessmentSummary = lazy(() => import("./pages/AssessmentSummary"));
+const RecommendationLoading = lazy(() => import("./pages/RecommendationLoading"));
+const Recommendations = lazy(() => import("./pages/Recommendations"));
+const CareerDetail = lazy(() => import("./pages/CareerDetail"));
+const Roadmap = lazy(() => import("./pages/Roadmap"));
+const RoadmapStageDetail = lazy(() => import("./pages/RoadmapStageDetail"));
+const SkillGap = lazy(() => import("./pages/SkillGap"));
+const LearningResources = lazy(() => import("./pages/LearningResources"));
+const ResourceDetail = lazy(() => import("./pages/ResourceDetail"));
+const Chatbot = lazy(() => import("./pages/Chatbot"));
+const ChatHistory = lazy(() => import("./pages/ChatHistory"));
+const SavedCareers = lazy(() => import("./pages/SavedCareers"));
+const CompareCareers = lazy(() => import("./pages/CompareCareers"));
+const StudentProfile = lazy(() => import("./pages/StudentProfile"));
+const Settings = lazy(() => import("./pages/Settings"));
+const HelpFAQ = lazy(() => import("./pages/HelpFAQ"));
+const ContactUs = lazy(() => import("./pages/ContactUs"));
+const AboutProject = lazy(() => import("./pages/AboutProject"));
+const NoRecommendationFound = lazy(() => import("./pages/NoRecommendationFound"));
+const SplashLoading = lazy(() => import("./pages/SplashLoading"));
+const TermsPrivacy = lazy(() => import("./pages/TermsPrivacy"));
+const NotFound = lazy(() => import("./pages/NotFound"));
 
-import AdminDashboard from "./pages/admin/AdminDashboard";
-import ManageUsers from "./pages/admin/ManageUsers";
-import ManageCareers from "./pages/admin/ManageCareers";
-import ManageResources from "./pages/admin/ManageResources";
-import ManageRoadmaps from "./pages/admin/ManageRoadmaps";
-import AdminReports from "./pages/admin/AdminReports";
+const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard"));
+const ManageUsers = lazy(() => import("./pages/admin/ManageUsers"));
+const ManageCareers = lazy(() => import("./pages/admin/ManageCareers"));
+const ManageResources = lazy(() => import("./pages/admin/ManageResources"));
+const ManageRoadmaps = lazy(() => import("./pages/admin/ManageRoadmaps"));
+const AdminReports = lazy(() => import("./pages/admin/AdminReports"));
 
 import ProtectedRoute from "./components/ProtectedRoute";
 import FloatingChatbotButton from "./components/FloatingChatbotButton";
@@ -50,7 +51,8 @@ function protectedPage(page) {
 function App() {
   return (
     <BrowserRouter>
-      <Routes>
+      <Suspense fallback={<div className="app-route-loader">Loading...</div>}>
+        <Routes>
         <Route path="/" element={<Landing />} />
 
         <Route path="/login" element={<Login />} />
@@ -94,7 +96,8 @@ function App() {
         <Route path="/admin/reports" element={protectedPage(<AdminReports />)} />
 
         <Route path="*" element={<NotFound />} />
-      </Routes>
+        </Routes>
+      </Suspense>
 
       <FloatingChatbotButton />
     </BrowserRouter>
