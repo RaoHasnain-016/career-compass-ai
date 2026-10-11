@@ -29,6 +29,7 @@ set -euo pipefail
 PARAMETER_NAME="__PARAMETER_NAME__"
 AWS_REGION="__AWS_REGION__"
 OUTPUT="/opt/career-compass/shared/backend.env"
+FIREBASE_FILE="/opt/career-compass/shared/firebase-service-account.json"
 TEMP_FILE="$(mktemp)"
 trap 'rm -f "$TEMP_FILE"' EXIT
 
@@ -39,9 +40,13 @@ aws ssm get-parameter \
   --query Parameter.Value \
   --output text >"$TEMP_FILE"
 
-jq -r 'to_entries[] | select(.value != null) | "\(.key)=\(.value|@json)"' "$TEMP_FILE" >"$OUTPUT"
+jq -er '.FIREBASE_CREDENTIALS_JSON' "$TEMP_FILE" >"$FIREBASE_FILE"
+jq -e . "$FIREBASE_FILE" >/dev/null
+jq -r 'del(.FIREBASE_CREDENTIALS_JSON) | .FIREBASE_CREDENTIALS_PATH = "/opt/career-compass/shared/firebase-service-account.json" | to_entries[] | select(.value != null) | "\(.key)=\(.value)"' "$TEMP_FILE" >"$OUTPUT"
 chown careercompass:careercompass "$OUTPUT"
 chmod 0600 "$OUTPUT"
+chown careercompass:careercompass "$FIREBASE_FILE"
+chmod 0600 "$FIREBASE_FILE"
 EOF
 sed -i "s|__PARAMETER_NAME__|${PARAMETER_NAME}|g; s|__AWS_REGION__|${AWS_REGION}|g" /usr/local/sbin/career-compass-sync-secrets
 chmod 0755 /usr/local/sbin/career-compass-sync-secrets
@@ -57,8 +62,8 @@ if [ ! -d "${SOURCE_DIR}/.git" ]; then
   rm -rf "$SOURCE_DIR"
   git clone --depth 1 --branch main "$REPOSITORY" "$SOURCE_DIR"
 else
-  git -C "$SOURCE_DIR" fetch --depth 1 origin main
-  git -C "$SOURCE_DIR" reset --hard origin/main
+  git -c safe.directory="$SOURCE_DIR" -C "$SOURCE_DIR" fetch --depth 1 origin main
+  git -c safe.directory="$SOURCE_DIR" -C "$SOURCE_DIR" reset --hard origin/main
 fi
 
 cd "$SOURCE_DIR"
