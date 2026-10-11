@@ -67,6 +67,16 @@
   gap: 8px;
 }
 
+.rec-nav::before {
+  content: "Student workspace";
+  margin: 0 15px 7px;
+  color: #94a3b8;
+  font-size: 0.68rem;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
 .rec-nav a,
 .rec-logout {
   border: 0;
@@ -915,9 +925,132 @@
   }
 }
 
+@media (max-width: 700px) {
+  .rec-sidebar {
+    gap: 12px;
+    padding: 16px 0 11px;
+    border-right: 0;
+    border-bottom: 1px solid var(--rec-border);
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.04);
+  }
+
+  .rec-brand {
+    margin: 0;
+    padding: 0 16px;
+  }
+
+  .rec-brand strong {
+    font-size: 1.1rem;
+    letter-spacing: -0.03em;
+  }
+
+  .rec-brand span {
+    display: none;
+  }
+
+  .rec-nav {
+    width: 100%;
+    flex-direction: row;
+    gap: 8px;
+    overflow-x: auto;
+    padding: 0 16px 4px;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .rec-nav::-webkit-scrollbar {
+    display: none;
+  }
+
+  .rec-nav::before {
+    display: none;
+  }
+
+  .rec-nav a {
+    width: auto;
+    min-height: 40px;
+    flex: 0 0 auto;
+    gap: 7px;
+    padding: 10px 12px;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    background: #f8fafc;
+    font-size: 0.78rem;
+    white-space: nowrap;
+  }
+
+  .rec-nav a.active {
+    border: 1px solid var(--rec-primary);
+    background: var(--rec-primary);
+    color: #fff;
+    box-shadow: 0 8px 16px rgba(11, 103, 194, 0.2);
+  }
+
+  .rec-upgrade-btn,
+  .rec-logout {
+    display: none;
+  }
+
+  .rec-topbar {
+    position: static;
+    min-height: 0;
+    gap: 10px;
+    padding: 13px 16px;
+  }
+
+  .rec-top-left {
+    width: 100%;
+    justify-content: space-between;
+    gap: 10px;
+  }
+
+  .rec-top-left strong {
+    font-size: 1rem;
+    white-space: nowrap;
+  }
+
+  .rec-top-left span {
+    max-width: 54vw;
+    overflow: hidden;
+    font-size: 0.8rem;
+    text-align: right;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .rec-top-actions {
+    gap: 0;
+  }
+
+  .rec-top-actions > button,
+  .rec-top-actions > img {
+    display: none;
+  }
+
+  .rec-search {
+    height: 40px;
+    padding: 0 14px;
+    font-size: 0.9rem;
+  }
+
+  .rec-content {
+    padding-bottom: 88px;
+  }
+}
+
 @media (max-width: 600px) {
   .rec-content {
-    padding: 24px 16px;
+    padding: 22px 16px 88px;
+  }
+
+  .rec-page-heading {
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+
+  .rec-page-heading h1 {
+    margin-bottom: 7px;
+    font-size: 1.9rem;
   }
 
   .rec-heading-actions,
