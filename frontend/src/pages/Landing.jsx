@@ -141,16 +141,22 @@ function Landing() {
               >
                 <div className="avatar-group">
                   <img
-                    src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=120&q=80"
+                    src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=96&q=65"
                     alt="student"
+                    loading="lazy"
+                    decoding="async"
                   />
                   <img
-                    src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=120&q=80"
+                    src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=96&q=65"
                     alt="student"
+                    loading="lazy"
+                    decoding="async"
                   />
                   <img
-                    src="https://images.unsplash.com/photo-1531123897727-8f129e1688ce?auto=format&fit=crop&w=120&q=80"
+                    src="https://images.unsplash.com/photo-1531123897727-8f129e1688ce?auto=format&fit=crop&w=96&q=65"
                     alt="student"
+                    loading="lazy"
+                    decoding="async"
                   />
                 </div>
                 <span>Trusted by students for smarter career planning</span>
@@ -168,8 +174,10 @@ function Landing() {
 
               <div className="hero-image-card">
                 <img
-                  src="https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&w=1200&q=85"
+                  src="https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&w=800&q=70"
                   alt="students using laptops"
+                  fetchPriority="high"
+                  decoding="async"
                 />
 
                 <motion.div
