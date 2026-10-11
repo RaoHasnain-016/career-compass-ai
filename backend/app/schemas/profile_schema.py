@@ -5,6 +5,7 @@ from pydantic import BaseModel
 class StudentProfileBase(BaseModel):
     age: Optional[str] = None
     country: Optional[str] = None
+    selected_career_id: Optional[str] = None
     academic_level: str
     class_degree: Optional[str] = None
     marks_cgpa: Optional[float] = None
@@ -22,6 +23,7 @@ class StudentProfileCreate(StudentProfileBase):
 class StudentProfileUpdate(BaseModel):
     age: Optional[str] = None
     country: Optional[str] = None
+    selected_career_id: Optional[str] = None
     academic_level: Optional[str] = None
     class_degree: Optional[str] = None
     marks_cgpa: Optional[float] = None

@@ -30,7 +30,10 @@ export async function getDashboardData() {
     ]);
 
   const recommendations = normalizeRecommendations(recommendationResponse);
-  const topRecommendation = recommendations[0] || null;
+  const selectedCareerId = profile?.selected_career_id;
+  const topRecommendation = recommendations.find((item) =>
+    (item.career_id || item?.career?.career_id) === selectedCareerId
+  ) || recommendations[0] || null;
   const careerId = topRecommendation?.career_id || topRecommendation?.career?.career_id;
 
   let roadmapResponse = { roadmap: [] };

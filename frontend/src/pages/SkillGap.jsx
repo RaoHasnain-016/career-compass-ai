@@ -49,7 +49,7 @@ export default function SkillGap() {
     };
   }, []);
 
-  const topRecommendation = recommendations[0] || null;
+  const topRecommendation = recommendations.find((item) => item.career_id === profile?.selected_career_id) || recommendations[0] || null;
   const currentSkills = asArray(profile?.skills);
   const matchedSkills = asArray(topRecommendation?.matched_skills);
   const missingSkills = asArray(topRecommendation?.missing_skills);

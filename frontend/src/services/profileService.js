@@ -40,6 +40,10 @@ export async function saveStudentProfile(profilePayload) {
   }
 }
 
+export async function selectCareer(careerId) {
+  return updateStudentProfile({ selected_career_id: careerId });
+}
+
 export async function generateRecommendations() {
   return post("/recommendations/generate");
 }

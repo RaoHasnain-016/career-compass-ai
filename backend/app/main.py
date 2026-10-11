@@ -80,6 +80,11 @@ def apply_startup_schema_patches():
                 """
             )
         )
+        connection.execute(
+            text(
+                "ALTER TABLE student_profiles ADD COLUMN IF NOT EXISTS selected_career_id UUID"
+            )
+        )
 
 
 # CORS setup for React/Vite frontend

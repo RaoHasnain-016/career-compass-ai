@@ -22,6 +22,7 @@ import {
   FaChartPie,
   FaCheckCircle,
   FaCompass,
+  FaDownload,
   FaExclamationCircle,
   FaFilter,
   FaHome,
@@ -43,6 +44,8 @@ import {
   getSavedCareers,
   saveCareer,
 } from "../services/recommendationService";
+import { getStudentProfile, selectCareer } from "../services/profileService";
+import { downloadCareerReport } from "../services/reportService";
 import "../styles/recommendations-page.css";
 
 const filterOptions = [
@@ -137,6 +140,8 @@ function Recommendations() {
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [savingId, setSavingId] = useState("");
+  const [selectedCareerId, setSelectedCareerId] = useState("");
+  const [profile, setProfile] = useState(null);
   const [error, setError] = useState("");
 
   async function loadRecommendations() {
@@ -144,9 +149,10 @@ function Recommendations() {
       setLoading(true);
       setError("");
 
-      const [recommendationData, savedData] = await Promise.all([
+      const [recommendationData, savedData, profileData] = await Promise.all([
         getMyRecommendations(),
         getSavedCareers(),
+        getStudentProfile().catch(() => null),
       ]);
 
       setRecommendations(recommendationData);
@@ -156,6 +162,8 @@ function Recommendations() {
         .filter(Boolean);
 
       setSavedCareerIds(ids);
+      setProfile(profileData);
+      setSelectedCareerId(profileData?.selected_career_id || recommendationData[0]?.career_id || "");
     } catch (error) {
       console.error(error);
       setError(
@@ -297,6 +305,27 @@ function Recommendations() {
     }
   };
 
+  const handleChooseCareer = async (careerId) => {
+    try {
+      setSavingId(careerId);
+      await selectCareer(careerId);
+      setSelectedCareerId(careerId);
+    } catch (error) {
+      setError(error.message || "Career selection could not be saved.");
+    } finally {
+      setSavingId("");
+    }
+  };
+
+  const handleDownloadReport = () => {
+    downloadCareerReport({
+      profile,
+      recommendations,
+      selectedCareerId,
+      name: getUserName(),
+    });
+  };
+
   const handleLogout = async () => {
     await signOut(auth);
     navigate("/login", { replace: true });
@@ -406,7 +435,10 @@ function Recommendations() {
                 disabled={generating}
               >
                 <FaSyncAlt className={generating ? "spin-icon" : ""} />
-                {generating ? "Regenerating..." : "Regenerate Analysis"}
+                {generating ? "Generating..." : "Generate More Careers"}
+              </button>
+              <button type="button" className="report-btn" onClick={handleDownloadReport} disabled={!recommendations.length}>
+                <FaDownload /> Download Report
               </button>
             </div>
           </div>
@@ -514,6 +546,7 @@ function Recommendations() {
                     const title = getCareerTitle(item);
                     const careerId = item.career_id || item?.career?.career_id;
                     const isSaved = savedCareerIds.includes(careerId);
+                    const isSelected = selectedCareerId === careerId;
                     const matchedSkills = asArray(item.matched_skills);
                     const missingSkills = asArray(item.missing_skills);
                     const matchedSubjects = asArray(item.matched_subjects);
@@ -624,6 +657,14 @@ function Recommendations() {
                             >
                               View Roadmap
                             </Link>
+                            <button
+                              type="button"
+                              className={isSelected ? "selected-career-btn" : "choose-career-btn"}
+                              onClick={() => handleChooseCareer(careerId)}
+                              disabled={savingId === careerId || isSelected}
+                            >
+                              {isSelected ? "Selected Career" : "Choose Career"}
+                            </button>
                           </div>
 
                           <div>

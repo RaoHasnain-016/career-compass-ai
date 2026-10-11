@@ -223,7 +223,8 @@
 
 .rec-heading-actions select,
 .filter-btn,
-.regenerate-btn {
+.regenerate-btn,
+.report-btn {
   min-height: 46px;
   border-radius: 14px;
   padding: 0 16px;
@@ -234,7 +235,8 @@
 }
 
 .filter-btn,
-.regenerate-btn {
+.regenerate-btn,
+.report-btn {
   display: inline-flex;
   align-items: center;
   gap: 9px;
@@ -250,6 +252,17 @@
 
 .regenerate-btn:disabled {
   opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.report-btn {
+  border: 1px solid #bfdbfe;
+  background: #eff6ff;
+  color: #075aa8;
+}
+
+.report-btn:disabled {
+  opacity: 0.55;
   cursor: not-allowed;
 }
 
@@ -654,6 +667,18 @@
 .rec-card-actions button.saved {
   color: var(--rec-primary);
   background: #eaf4ff;
+}
+
+.rec-card-actions .choose-career-btn {
+  background: #0b67c2;
+  color: #fff;
+  border-color: #0b67c2;
+}
+
+.rec-card-actions .selected-career-btn {
+  background: #ecfdf5;
+  color: #047857;
+  border-color: #a7f3d0;
 }
 
 .ask-ai-btn {
