@@ -41,7 +41,9 @@ async def lifespan(app: FastAPI):
     default_auto_create = "false" if os.getenv("VERCEL") == "1" else "true"
     if os.getenv("DATABASE_AUTO_CREATE", default_auto_create).lower() == "true":
         Base.metadata.create_all(bind=engine)
-    apply_startup_schema_patches()
+    # Vercel uses the separately migrated schema on every cold start.
+    if os.getenv("VERCEL") != "1":
+        apply_startup_schema_patches()
     yield
 
 
