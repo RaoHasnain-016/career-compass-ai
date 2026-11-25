@@ -194,6 +194,19 @@
   outline: 0;
 }
 
+.skill-gap-picker {
+  display: grid;
+  gap: 8px;
+  max-width: 620px;
+  margin-bottom: 16px;
+}
+
+.skill-gap-picker label {
+  font-size: 0.86rem;
+  color: var(--student-muted);
+  font-weight: 800;
+}
+
 .cc-textarea {
   min-height: 130px;
   resize: vertical;

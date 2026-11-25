@@ -38,6 +38,7 @@ import {
 } from "react-icons/fa";
 import { signOut } from "firebase/auth";
 import { auth } from "../firebase/firebase";
+import Sidebar from "../components/Sidebar";
 import {
   generateCareerRecommendations,
   getMyRecommendations,
@@ -47,6 +48,7 @@ import {
 import { getStudentProfile, selectCareer } from "../services/profileService";
 import { downloadCareerReport } from "../services/reportService";
 import "../styles/recommendations-page.css";
+import "../styles/student-layout.css";
 
 const filterOptions = [
   "All",
@@ -344,37 +346,9 @@ function Recommendations() {
   }
 
   return (
-    <div className="recommendations-page">
-      <aside className="rec-sidebar">
-        <Link to="/" className="rec-brand">
-          <strong>Career Compass AI</strong>
-          <span>AI Navigator</span>
-        </Link>
-
-        <nav className="rec-nav">
-          {navLinks.map((item) => (
-            <Link
-              key={item.path}
-              to={item.path}
-              className={item.path === "/recommendations" ? "active" : ""}
-            >
-              {item.icon}
-              <span>{item.label}</span>
-            </Link>
-          ))}
-        </nav>
-
-        <button type="button" className="rec-upgrade-btn">
-          Upgrade to Pro
-        </button>
-
-        <button type="button" className="rec-logout" onClick={handleLogout}>
-          <FaSignOutAlt />
-          Logout
-        </button>
-      </aside>
-
-      <main className="rec-main">
+    <div className="recommendations-page student-shell">
+      <Sidebar />
+      <main className="rec-main student-main">
         <header className="rec-topbar">
           <div className="rec-top-left">
             <strong>Career Compass AI</strong>

@@ -36,9 +36,11 @@ import {
 } from "react-icons/fa";
 import { signOut } from "firebase/auth";
 import { auth } from "../firebase/firebase";
+import Sidebar from "../components/Sidebar";
 import { getDashboardData } from "../services/dashboardService";
 import { generateCareerRecommendations } from "../services/recommendationService";
 import "../styles/dashboard-page.css";
+import "../styles/student-layout.css";
 
 const sidebarLinks = [
   { label: "Dashboard", path: "/dashboard", icon: <FaChartLine /> },
@@ -348,44 +350,9 @@ function Dashboard() {
   }
 
   return (
-    <div className="dashboard-page">
-      <aside className="dashboard-sidebar">
-        <Link to="/" className="dashboard-brand">
-          <span>
-            <FaCompass />
-          </span>
-          <div>
-            <strong>Career Compass AI</strong>
-            <small>AI Career Advisor</small>
-          </div>
-        </Link>
-
-        <nav className="dashboard-nav">
-          {sidebarLinks.map((item) => (
-            <Link
-              key={item.path}
-              to={item.path}
-              className={item.path === "/dashboard" ? "active" : ""}
-            >
-              {item.icon}
-              <span>{item.label}</span>
-            </Link>
-          ))}
-        </nav>
-
-        <div className="dashboard-pro-card">
-          <p>PRO PLAN</p>
-          <span>Unlock advanced AI mentorship and premium roadmap insights.</span>
-          <button type="button">Upgrade to Premium</button>
-        </div>
-
-        <button type="button" className="logout-btn" onClick={handleLogout}>
-          <FaSignOutAlt />
-          Logout
-        </button>
-      </aside>
-
-      <main className="dashboard-main">
+    <div className="dashboard-page student-shell">
+      <Sidebar />
+      <main className="dashboard-main student-main">
         <header className="dashboard-topbar">
           <div className="dashboard-search">
             <FaSearch />
