@@ -4,6 +4,33 @@ def safe_list(value):
     return value
 
 
+# Canonical concepts prevent country/course naming differences from being treated
+# as different capabilities. The raw labels are still returned to the UI.
+CONCEPT_ALIASES = {
+    "computing": {"computer science", "computing", "programming", "software", "web development", "python", "java", "javascript"},
+    "data": {"data analysis", "data analytics", "statistics", "business analytics", "data science"},
+    "databases": {"database", "databases", "sql", "postgresql"},
+    "mathematics": {"mathematics", "math", "calculus", "algebra"},
+    "life_sciences": {"biology", "biology knowledge", "life sciences", "health science"},
+    "business": {"business", "business studies", "commerce", "management", "accounting", "finance", "economics"},
+    "design": {"design", "arts", "arts & design", "graphic design", "ui design", "visual thinking"},
+    "communication": {"communication", "presentation", "public speaking", "writing", "academic writing"},
+    "research": {"research", "research methods", "critical thinking"},
+    "education": {"education", "teaching", "subject knowledge", "patience"},
+}
+
+
+def concept_set(value):
+    raw = str(value).strip().lower()
+    if not raw:
+        return set()
+    concepts = {raw}
+    for concept, aliases in CONCEPT_ALIASES.items():
+        if raw in aliases:
+            concepts.add(concept)
+    return concepts
+
+
 def normalize_list(items):
     return set(
         str(item).strip().lower()
@@ -14,13 +41,17 @@ def normalize_list(items):
 
 def calculate_percentage_match(student_items, career_items):
     student_set = normalize_list(student_items)
+    student_concepts = set().union(*(concept_set(item) for item in student_set)) if student_set else set()
     career_set = normalize_list(career_items)
 
     if not career_set:
         return 0, [], []
 
-    matched = student_set.intersection(career_set)
-    missing = career_set.difference(student_set)
+    matched = {
+        item for item in career_set
+        if concept_set(item).intersection(student_concepts)
+    }
+    missing = career_set.difference(matched)
 
     percentage = len(matched) / len(career_set)
 
@@ -28,7 +59,7 @@ def calculate_percentage_match(student_items, career_items):
 
 
 def calculate_academic_score(profile, career):
-    marks = float(profile.marks_cgpa) if profile.marks_cgpa is not None else 0
+    marks = normalize_academic_score(profile)
     minimum_marks = float(career.minimum_marks) if career.minimum_marks is not None else 0
 
     level_status = academic_stage_status(profile, career)
@@ -55,6 +86,23 @@ def calculate_academic_score(profile, career):
     return round(academic_score, 2), status
 
 
+def normalize_academic_score(profile):
+    """Return an academic score on a 0-100 scale.
+
+    The profile setup records whether the submitted value is a percentage, a
+    GPA out of four, or a GPA out of five. Existing profiles without this
+    metadata retain the historical percentage interpretation.
+    """
+    raw_score = float(profile.marks_cgpa) if profile.marks_cgpa is not None else 0
+    preference = str(getattr(profile, "study_preference", "") or "").lower()
+
+    if "academic scale: gpa out of 4" in preference:
+        return min(100, max(0, (raw_score / 4) * 100))
+    if "academic scale: gpa out of 5" in preference:
+        return min(100, max(0, (raw_score / 5) * 100))
+    return min(100, max(0, raw_score))
+
+
 def academic_stage_status(profile, career):
     level = str(profile.academic_level or "").lower()
     required = str(career.required_education or "").lower()
@@ -62,12 +110,17 @@ def academic_stage_status(profile, career):
     school_levels = ("matric", "secondary", "high school", "class 9", "middle")
     senior_levels = ("intermediate", "senior secondary", "sixth form", "a level", "high school senior")
     undergraduate_levels = ("bachelor", "undergraduate")
+    diploma_levels = ("diploma", "dae", "technical", "vocational", "vet", "polytechnic", "associate degree", "short-cycle")
 
     if any(item in level for item in school_levels) and any(
         item in required for item in ("intermediate", "bachelor", "degree", "mbbs", "master")
     ):
         return "foundation_stage"
     if any(item in level for item in senior_levels) and any(
+        item in required for item in ("bachelor", "degree", "mbbs", "master")
+    ):
+        return "foundation_stage"
+    if any(item in level for item in diploma_levels) and any(
         item in required for item in ("bachelor", "degree", "mbbs", "master")
     ):
         return "foundation_stage"
@@ -89,6 +142,11 @@ def stage_guidance(profile, career):
         return (
             f"At your senior-secondary stage in {country}, strengthen admission-relevant subjects, build a small portfolio, "
             f"and research entry requirements for {career.title}."
+        )
+    if any(item in level for item in ("diploma", "dae", "technical", "vocational", "polytechnic")):
+        return (
+            f"At your technical or diploma stage in {country}, build applied evidence, complete industry-relevant projects, "
+            f"and choose whether {career.title} is best reached through employment, certification, or further study."
         )
     if "master" in level or "postgraduate" in level or "graduate" in level:
         return (
@@ -126,6 +184,34 @@ def calculate_preference_score(profile, career):
         score += 5
     elif "challenging" in study_preference and difficulty in ["difficult", "hard"]:
         score += 5
+
+    # Stage-aware direction is collected separately from a learner's generic
+    # study method. It adds a small signal without overriding academics,
+    # demonstrated skills, or subject fit.
+    direction_to_fields = {
+        "technology": ["technology", "data"],
+        "health & science": ["medical", "science"],
+        "engineering": ["engineering"],
+        "business": ["business"],
+        "design & media": ["design"],
+        "social sciences": ["teaching", "social sciences"],
+        "education": ["teaching"],
+        "health": ["medical"],
+        "research": ["science", "data", "medical"],
+        "advanced technical role": ["technology", "engineering", "data"],
+        "management & leadership": ["business"],
+        "teaching & academia": ["teaching", "science"],
+        "law": ["law"],
+        "architecture": ["architecture"],
+        "media & communication": ["media & communication"],
+        "social sciences": ["social sciences"],
+        "creative arts": ["design", "media & communication"],
+        "humanities & social impact": ["social sciences", "education"],
+    }
+    for direction, fields in direction_to_fields.items():
+        if f"career direction: {direction}" in study_preference and career_field in fields:
+            score += 4
+            break
 
     return min(score, 10)
 

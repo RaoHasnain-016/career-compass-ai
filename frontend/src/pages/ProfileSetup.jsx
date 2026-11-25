@@ -21,42 +21,10 @@ import {
   getStudentProfile,
   saveStudentProfile,
 } from "../services/profileService";
-import { countryOptions, educationOptionsFor } from "../data/educationCatalog";
+import { assessmentFor, countryOptions, educationOptionsFor, interestsFor, skillsFor, subjectsFor } from "../data/educationCatalog";
 import "../styles/profile-setup.css";
 
 const DRAFT_KEY = "careerCompassProfileDraft";
-
-const interestOptions = [
-  "Technology",
-  "Medical",
-  "Business",
-  "Teaching",
-  "Design",
-  "Data",
-  "Research",
-  "Helping People",
-  "Creativity",
-  "Management",
-  "Problem Solving",
-  "Communication",
-];
-
-const skillOptions = [
-  "Programming",
-  "Database",
-  "Web Development",
-  "Communication",
-  "Leadership",
-  "Problem Solving",
-  "Excel",
-  "Python",
-  "SQL",
-  "Design",
-  "Research",
-  "Presentation",
-  "Critical Thinking",
-  "Creativity",
-];
 
 const learningOptions = [
   "Video-based learning",
@@ -82,6 +50,7 @@ const initialForm = {
   academic_level: "",
   class_degree: "",
   marks_cgpa: "",
+  academic_scale: "percentage",
   education_stream: "",
   current_institution: "",
   favorite_subjects: [],
@@ -92,6 +61,8 @@ const initialForm = {
   weekly_study_hours: "",
   preferred_language: "",
   career_goal_timeline: "",
+  career_direction: "",
+  decision_context: "",
 };
 
 function safeArray(value) {
@@ -128,6 +99,9 @@ function parseStudyPreference(value = "") {
     education_stream: "",
     current_institution: "",
     country: "",
+    academic_scale: "percentage",
+    career_direction: "",
+    decision_context: "",
   };
 
   parts.slice(1).forEach((part) => {
@@ -159,6 +133,18 @@ function parseStudyPreference(value = "") {
 
     if (lower.startsWith("country:")) {
       parsed.country = part.replace(/country:/i, "").trim();
+    }
+
+    if (lower.startsWith("academic scale:")) {
+      parsed.academic_scale = part.replace(/academic scale:/i, "").trim();
+    }
+
+    if (lower.startsWith("career direction:")) {
+      parsed.career_direction = part.replace(/career direction:/i, "").trim();
+    }
+
+    if (lower.startsWith("decision context:")) {
+      parsed.decision_context = part.replace(/decision context:/i, "").trim();
     }
   });
 
@@ -207,6 +193,7 @@ function ProfileSetup() {
       Boolean(form.academic_level),
       Boolean(form.class_degree),
       Boolean(form.marks_cgpa),
+      Boolean(form.academic_scale),
       Boolean(form.education_stream),
       Boolean(form.current_institution),
       form.favorite_subjects.length > 0,
@@ -217,6 +204,8 @@ function ProfileSetup() {
       Boolean(form.weekly_study_hours),
       Boolean(form.preferred_language),
       Boolean(form.career_goal_timeline),
+      Boolean(form.career_direction),
+      Boolean(form.decision_context),
     ];
 
     const done = checks.filter(Boolean).length;
@@ -224,17 +213,37 @@ function ProfileSetup() {
     return Math.round((done / checks.length) * 100);
   }, [form]);
 
+  const interestOptions = useMemo(
+    () => [...new Set([...interestsFor(form.career_direction), ...form.interests])],
+    [form.career_direction, form.interests]
+  );
+
+  const skillOptions = useMemo(
+    () => [...new Set([...skillsFor(form.career_direction), ...form.skills])],
+    [form.career_direction, form.skills]
+  );
+
   const filteredSkills = useMemo(() => {
     const query = skillSearch.trim().toLowerCase();
 
     if (!query) return skillOptions;
 
     return skillOptions.filter((skill) => skill.toLowerCase().includes(query));
-  }, [skillSearch]);
+  }, [skillOptions, skillSearch]);
 
   const educationCatalog = useMemo(
     () => educationOptionsFor(form.country),
     [form.country]
+  );
+
+  const stageSubjects = useMemo(
+    () => subjectsFor(form.country, form.academic_level, form.education_stream),
+    [form.country, form.academic_level, form.education_stream]
+  );
+
+  const stageAssessment = useMemo(
+    () => assessmentFor(form.academic_level),
+    [form.academic_level]
   );
 
   useEffect(() => {
@@ -252,6 +261,7 @@ function ProfileSetup() {
           academic_level: profile?.academic_level || "",
           class_degree: profile?.class_degree || "",
           marks_cgpa: profile?.marks_cgpa || "",
+          academic_scale: parsedPreference.academic_scale || "percentage",
           favorite_subjects: safeArray(profile?.favorite_subjects),
           weak_subjects: safeArray(profile?.weak_subjects),
           interests: safeArray(profile?.interests),
@@ -262,6 +272,8 @@ function ProfileSetup() {
           career_goal_timeline: parsedPreference.career_goal_timeline,
           education_stream: parsedPreference.education_stream,
           current_institution: parsedPreference.current_institution,
+          career_direction: parsedPreference.career_direction,
+          decision_context: parsedPreference.decision_context,
         });
 
         setHighestStep(6);
@@ -338,8 +350,8 @@ function ProfileSetup() {
 
   const validateStep = (targetStep = step) => {
     if (targetStep === 1) {
-      if (!form.age || !form.country || !form.academic_level || !form.class_degree || !form.marks_cgpa) {
-        return "Please complete age, country, academic level, class/degree, and marks/CGPA.";
+      if (!form.age || !form.country || !form.academic_level || !form.class_degree || !form.marks_cgpa || !form.academic_scale || !form.career_direction) {
+        return "Please complete age, country, academic level, class/degree, score, score scale, and career direction.";
       }
 
       if (Number(form.age) < 10 || Number(form.age) > 80) {
@@ -378,6 +390,10 @@ function ProfileSetup() {
 
       if (!form.career_goal_timeline) {
         return "Please select your career goal timeline.";
+      }
+
+      if (!form.decision_context) {
+        return "Please select the decision you need help with.";
       }
     }
 
@@ -457,6 +473,9 @@ function ProfileSetup() {
         ? `Current institution: ${form.current_institution}`
         : "",
       form.country ? `Country: ${form.country}` : "",
+      form.academic_scale ? `Academic scale: ${form.academic_scale}` : "",
+      form.career_direction ? `Career direction: ${form.career_direction}` : "",
+      form.decision_context ? `Decision context: ${form.decision_context}` : "",
     ].filter(Boolean);
 
     return {
@@ -707,6 +726,9 @@ function ProfileSetup() {
                           country: e.target.value,
                           academic_level: "",
                           education_stream: "",
+                          academic_scale: "percentage",
+                          career_direction: "",
+                          decision_context: "",
                           favorite_subjects: [],
                           weak_subjects: [],
                         }))
@@ -732,15 +754,24 @@ function ProfileSetup() {
                   </div>
 
                   <div className="setup-field">
-                    <label>Marks or CGPA</label>
+                    <label>Academic Score</label>
                     <input
                       type="number"
-                      placeholder="e.g. 82 or 3.5"
+                      placeholder={form.academic_scale === "GPA out of 4" ? "e.g. 3.5" : form.academic_scale === "GPA out of 5" ? "e.g. 4.2" : "e.g. 82"}
                       value={form.marks_cgpa}
                       onChange={(e) =>
                         updateField("marks_cgpa", e.target.value)
                       }
                     />
+                  </div>
+
+                  <div className="setup-field">
+                    <label>Score Scale</label>
+                    <select value={form.academic_scale} onChange={(e) => updateField("academic_scale", e.target.value)}>
+                      <option value="percentage">Percentage (out of 100)</option>
+                      <option value="GPA out of 4">GPA out of 4</option>
+                      <option value="GPA out of 5">GPA out of 5</option>
+                    </select>
                   </div>
 
                   <div className="setup-field">
@@ -755,6 +786,14 @@ function ProfileSetup() {
                       {(educationCatalog.streams[form.academic_level] || ["General / exploring options"]).map((stream) => (
                         <option key={stream} value={stream}>{stream}</option>
                       ))}
+                    </select>
+                  </div>
+
+                  <div className="setup-field">
+                    <label>{stageAssessment.directionLabel}</label>
+                    <select value={form.career_direction} onChange={(e) => updateField("career_direction", e.target.value)}>
+                      <option value="">Select a direction</option>
+                      {stageAssessment.directionOptions.map((option) => <option key={option} value={option}>{option}</option>)}
                     </select>
                   </div>
 
@@ -779,7 +818,7 @@ function ProfileSetup() {
                     <p>Select subjects available in your education system that you enjoy and perform well in.</p>
 
                     <div className="chip-grid">
-                      {educationCatalog.subjects.map((subject) => (
+                      {stageSubjects.map((subject) => (
                         <button
                           type="button"
                           key={`fav-${subject}`}
@@ -803,7 +842,7 @@ function ProfileSetup() {
                     <p>Select subjects where you need improvement.</p>
 
                     <div className="chip-grid">
-                      {educationCatalog.subjects.map((subject) => (
+                      {stageSubjects.map((subject) => (
                         <button
                           type="button"
                           key={`weak-${subject}`}
@@ -827,8 +866,9 @@ function ProfileSetup() {
               {step === 3 && (
                 <div>
                   <h3 className="setup-section-title">
-                    What are you interested in?
+                    Interests for {form.career_direction}
                   </h3>
+                  <p className="setup-section-copy">Choose interests that fit your selected direction. You can keep transferable interests too.</p>
 
                   <div className="interest-grid">
                     {interestOptions.map((interest) => (
@@ -853,6 +893,8 @@ function ProfileSetup() {
 
               {step === 4 && (
                 <div>
+                  <h3 className="setup-section-title">Skills for {form.career_direction}</h3>
+                  <p className="setup-section-copy">Select current skills. These are used separately for every recommended career's skill-gap analysis.</p>
                   <div className="skill-search">
                     <FaSearch />
                     <input
@@ -901,6 +943,22 @@ function ProfileSetup() {
 
               {step === 5 && (
                 <div>
+                  <div className="stage-assessment-intro">
+                    <span>Stage-aware assessment</span>
+                    <h3>{stageAssessment.title}</h3>
+                    <p>Your answers shape recommendations and next steps for your current education stage.</p>
+                  </div>
+
+                  <div className="setup-grid extra-preferences">
+                    <div className="setup-field">
+                      <label>{stageAssessment.contextLabel}</label>
+                      <select value={form.decision_context} onChange={(e) => updateField("decision_context", e.target.value)}>
+                        <option value="">Select your current goal</option>
+                        {stageAssessment.contextOptions.map((option) => <option key={option} value={option}>{option}</option>)}
+                      </select>
+                    </div>
+                  </div>
+
                   <h3 className="setup-section-title">
                     How do you prefer to learn?
                   </h3>
@@ -977,10 +1035,12 @@ function ProfileSetup() {
                     <h3>Academic Profile</h3>
                     <p>{form.academic_level || "Not selected"}</p>
                     <p>{form.class_degree || "Degree not added"}</p>
-                    <p>Marks/CGPA: {form.marks_cgpa || "N/A"}</p>
+                    <p>Score: {form.marks_cgpa || "N/A"} ({form.academic_scale})</p>
                     <p>Stream: {form.education_stream || "N/A"}</p>
                     <p>Country: {form.country || "N/A"}</p>
                     <p>Institution: {form.current_institution || "N/A"}</p>
+                    <p>Career direction: {form.career_direction || "N/A"}</p>
+                    <p>Current goal: {form.decision_context || "N/A"}</p>
                   </div>
 
                   <div className="review-card">

@@ -27,5 +27,21 @@ export default defineConfig(({ mode }) => {
         "/api": apiProxy,
       },
     },
+    build: {
+      rollupOptions: {
+        output: {
+          manualChunks(id) {
+            if (!id.includes("node_modules")) return undefined;
+            if (id.includes("recharts")) return "charts";
+            if (id.includes("firebase")) return "firebase";
+            if (id.includes("framer-motion")) return "motion";
+            if (id.includes("react-icons")) return "icons";
+            if (id.includes("react-router")) return "router";
+            if (id.includes("react-dom") || id.includes("/react/")) return "react";
+            return undefined;
+          },
+        },
+      },
+    },
   };
 });

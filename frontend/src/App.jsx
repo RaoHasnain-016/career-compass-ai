@@ -41,9 +41,11 @@ const ManageResources = lazy(() => import("./pages/admin/ManageResources"));
 const ManageRoadmaps = lazy(() => import("./pages/admin/ManageRoadmaps"));
 const AdminReports = lazy(() => import("./pages/admin/AdminReports"));
 
-import ProtectedRoute from "./components/ProtectedRoute";
-import AdminRoute from "./components/AdminRoute";
-import FloatingChatbotButton from "./components/FloatingChatbotButton";
+// These modules import Firebase and icon code. Loading them only when the
+// visitor opens a protected route keeps the public landing page lightweight.
+const ProtectedRoute = lazy(() => import("./components/ProtectedRoute"));
+const AdminRoute = lazy(() => import("./components/AdminRoute"));
+const FloatingChatbotButton = lazy(() => import("./components/FloatingChatbotButton"));
 
 function protectedPage(page) {
   return <ProtectedRoute>{page}</ProtectedRoute>;
@@ -104,7 +106,9 @@ function App() {
         </Routes>
       </Suspense>
 
-      <FloatingChatbotButton />
+      <Suspense fallback={null}>
+        <FloatingChatbotButton />
+      </Suspense>
     </BrowserRouter>
   );
 }

@@ -344,6 +344,31 @@
   font-size: 1.3rem;
 }
 
+.setup-section-copy {
+  margin: -4px 0 18px;
+  color: #64748b;
+  line-height: 1.55;
+}
+
+.stage-assessment-intro {
+  margin-bottom: 22px;
+  padding: 18px 20px;
+  border: 1px solid #dbeafe;
+  border-radius: 16px;
+  background: linear-gradient(135deg, #f8fbff, #eef8ff);
+}
+
+.stage-assessment-intro span {
+  color: #0b67c2;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.stage-assessment-intro h3 { margin: 7px 0 6px; color: #0f172a; }
+.stage-assessment-intro p { margin: 0; color: #64748b; line-height: 1.55; }
+
 .subject-section p {
   margin: 0 0 18px;
   color: var(--profile-muted);

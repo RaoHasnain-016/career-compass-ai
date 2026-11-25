@@ -18,6 +18,18 @@ def add_career(db, data):
 
 
 def add_roadmap_stage(db, career_id, stage_order, title, description, required_skills, suggested_resources):
+    existing = (
+        db.query(RoadmapStage)
+        .filter(
+            RoadmapStage.career_id == career_id,
+            RoadmapStage.stage_order == stage_order,
+        )
+        .first()
+    )
+
+    if existing:
+        return existing
+
     stage = RoadmapStage(
         career_id=career_id,
         stage_order=stage_order,
@@ -225,7 +237,7 @@ def seed_careers(db):
         "status": True,
     })
 
-    return {
+    careers = {
         "software_engineer": software_engineer,
         "data_analyst": data_analyst,
         "doctor": doctor,
@@ -233,6 +245,134 @@ def seed_careers(db):
         "graphic_designer": graphic_designer,
         "teacher": teacher,
     }
+
+    # Department coverage for the FYP catalogue. These are curated starter
+    # records; administrators can refine country-specific entry requirements.
+    additional_careers = [
+        {
+            "key": "cybersecurity_analyst", "title": "Cybersecurity Analyst", "field": "Technology",
+            "overview": "Cybersecurity analysts protect systems, networks, and information by identifying risks and improving security controls.",
+            "required_education": "Senior-secondary Mathematics or Computing followed by a degree, diploma, or verified technical pathway in computing or cybersecurity.",
+            "required_skills": ["Programming", "Database", "Problem Solving", "Research", "Communication"],
+            "required_subjects": ["Computer Science", "Mathematics"],
+            "related_interests": ["Technology", "Problem Solving", "Research"], "minimum_marks": 60,
+            "future_scope": "Roles in security operations, cloud security, incident response, and risk management.", "difficulty_level": "Difficult", "status": True,
+        },
+        {
+            "key": "civil_engineer", "title": "Civil Engineer", "field": "Engineering",
+            "overview": "Civil engineers plan and deliver infrastructure such as buildings, transport systems, water networks, and public works.",
+            "required_education": "Senior-secondary Mathematics and Physics followed by an accredited civil engineering degree where required.",
+            "required_skills": ["Mathematics", "Problem Solving", "Project Management", "Communication"],
+            "required_subjects": ["Mathematics", "Physics"],
+            "related_interests": ["Problem Solving", "Technology", "Management"], "minimum_marks": 60,
+            "future_scope": "Infrastructure, construction, transport, environmental projects, and consulting.", "difficulty_level": "Difficult", "status": True,
+        },
+        {
+            "key": "accountant", "title": "Accountant", "field": "Business",
+            "overview": "Accountants prepare, review, and explain financial information to help individuals and organisations make responsible decisions.",
+            "required_education": "Senior-secondary commerce, business, or mathematics followed by an accounting degree or professional qualification pathway.",
+            "required_skills": ["Mathematics", "Excel", "Analysis", "Communication", "Critical Thinking"],
+            "required_subjects": ["Accounting", "Business Studies", "Mathematics", "Economics"],
+            "related_interests": ["Business", "Data", "Problem Solving"], "minimum_marks": 50,
+            "future_scope": "Audit, taxation, financial reporting, corporate finance, and public accounting.", "difficulty_level": "Moderate", "status": True,
+        },
+        {
+            "key": "pharmacist", "title": "Pharmacist", "field": "Medical",
+            "overview": "Pharmacists support safe and effective medicine use, patient counselling, and healthcare teams.",
+            "required_education": "Science pathway with Biology and Chemistry followed by the required pharmacy degree and local licensing process.",
+            "required_skills": ["Communication", "Research", "Critical Thinking", "Helping People"],
+            "required_subjects": ["Biology", "Chemistry"],
+            "related_interests": ["Medical", "Helping People", "Science", "Research"], "minimum_marks": 65,
+            "future_scope": "Community and hospital pharmacy, pharmaceutical industry, quality assurance, and research.", "difficulty_level": "Difficult", "status": True,
+        },
+        {
+            "key": "psychologist", "title": "Psychologist", "field": "Social Sciences",
+            "overview": "Psychologists study behaviour and wellbeing, using ethical assessment, communication, and evidence-based support.",
+            "required_education": "A psychology degree followed by postgraduate study, supervised practice, and local licensing where required.",
+            "required_skills": ["Communication", "Research", "Critical Thinking", "Helping People"],
+            "required_subjects": ["Biology", "Statistics", "English"],
+            "related_interests": ["Helping People", "Research", "Communication"], "minimum_marks": 55,
+            "future_scope": "Mental-health services, organisational psychology, education, research, and community work.", "difficulty_level": "Difficult", "status": True,
+        },
+        {
+            "key": "lawyer", "title": "Lawyer", "field": "Law",
+            "overview": "Lawyers research legal issues, advise clients, prepare documents, and represent interests within legal and ethical frameworks.",
+            "required_education": "Relevant law degree and jurisdiction-specific professional examinations or supervised training.",
+            "required_skills": ["Communication", "Research", "Critical Thinking", "Presentation"],
+            "required_subjects": ["English", "History", "Social Studies"],
+            "related_interests": ["Research", "Communication", "Helping People"], "minimum_marks": 60,
+            "future_scope": "Legal practice, corporate compliance, public service, policy, and legal research.", "difficulty_level": "Difficult", "status": True,
+        },
+        {
+            "key": "architect", "title": "Architect", "field": "Architecture",
+            "overview": "Architects design functional, safe, and sustainable buildings while balancing user needs, regulations, and visual quality.",
+            "required_education": "Mathematics, design, and science preparation followed by an accredited architecture programme and local licensing where required.",
+            "required_skills": ["Design", "Mathematics", "Creativity", "Project Management", "Communication"],
+            "required_subjects": ["Mathematics", "Arts & Design", "Physics"],
+            "related_interests": ["Design", "Creativity", "Problem Solving"], "minimum_marks": 55,
+            "future_scope": "Architecture firms, urban design, construction, sustainability, and visualisation.", "difficulty_level": "Difficult", "status": True,
+        },
+        {
+            "key": "journalist", "title": "Journalist", "field": "Media & Communication",
+            "overview": "Journalists research, verify, and communicate public-interest stories across print, broadcast, and digital media.",
+            "required_education": "A media, journalism, communications, or related degree is useful; a verified reporting portfolio is essential.",
+            "required_skills": ["Communication", "Research", "Writing", "Critical Thinking", "Presentation"],
+            "required_subjects": ["English", "History", "Geography"],
+            "related_interests": ["Communication", "Research", "Creativity"], "minimum_marks": 50,
+            "future_scope": "Digital journalism, editorial work, broadcast media, communications, and content strategy.", "difficulty_level": "Moderate", "status": True,
+        },
+        {
+            "key": "environmental_scientist", "title": "Environmental Scientist", "field": "Science",
+            "overview": "Environmental scientists investigate environmental problems and support evidence-based solutions for communities and organisations.",
+            "required_education": "Science preparation followed by environmental science, ecology, chemistry, geography, or related study.",
+            "required_skills": ["Research", "Data Analysis", "Critical Thinking", "Communication"],
+            "required_subjects": ["Biology", "Chemistry", "Geography", "Mathematics"],
+            "related_interests": ["Science", "Research", "Helping People"], "minimum_marks": 55,
+            "future_scope": "Environmental monitoring, sustainability, conservation, policy, and consulting.", "difficulty_level": "Moderate", "status": True,
+        },
+        {
+            "key": "it_support_technician", "title": "IT Support Technician", "field": "Technology",
+            "overview": "IT support technicians install, maintain, and troubleshoot devices, networks, software, and user access.",
+            "required_education": "Technical or vocational certificate, diploma, or supervised entry pathway in IT support, networking, or computing.",
+            "required_skills": ["Computer Applications", "Problem Solving", "Communication", "Research"],
+            "required_subjects": ["Computer Science", "Mathematics", "Communication"],
+            "related_interests": ["Technology", "Problem Solving", "Helping People"], "minimum_marks": 45,
+            "future_scope": "IT support, help desk, network operations, cloud support, and progression to systems administration.", "difficulty_level": "Moderate", "status": True,
+        },
+        {
+            "key": "electrical_technician", "title": "Electrical Engineering Technician", "field": "Engineering",
+            "overview": "Electrical engineering technicians support installation, testing, maintenance, and troubleshooting of electrical systems under relevant supervision.",
+            "required_education": "Electrical diploma, DAE, vocational certificate, or a supervised technical training pathway.",
+            "required_skills": ["Applied Mathematics", "Applied Physics", "Problem Solving", "Communication"],
+            "required_subjects": ["Applied Mathematics", "Applied Physics", "Electrical Fundamentals"],
+            "related_interests": ["Technology", "Problem Solving", "Management"], "minimum_marks": 45,
+            "future_scope": "Electrical maintenance, industrial systems, energy, automation, and progression to engineering study.", "difficulty_level": "Moderate", "status": True,
+        },
+        {
+            "key": "medical_lab_technician", "title": "Medical Laboratory Technician", "field": "Medical",
+            "overview": "Medical laboratory technicians support safe specimen handling, testing, quality processes, and healthcare teams.",
+            "required_education": "Recognised laboratory technology diploma, vocational training, or country-specific supervised pathway.",
+            "required_skills": ["Research", "Critical Thinking", "Communication", "Project Work"],
+            "required_subjects": ["Biology", "Chemistry", "Applied Physics"],
+            "related_interests": ["Medical", "Science", "Helping People"], "minimum_marks": 50,
+            "future_scope": "Diagnostic laboratories, hospitals, quality assurance, and progression to health-science qualifications.", "difficulty_level": "Moderate", "status": True,
+        },
+        {
+            "key": "accounting_technician", "title": "Accounting Technician", "field": "Business",
+            "overview": "Accounting technicians support bookkeeping, invoices, payroll, reconciliations, and financial records using recognised processes and software.",
+            "required_education": "Business or accounting diploma, vocational certificate, or recognised entry-level professional pathway.",
+            "required_skills": ["Applied Mathematics", "Computer Applications", "Communication", "Project Work"],
+            "required_subjects": ["Mathematics", "Business Studies", "Accounting"],
+            "related_interests": ["Business", "Data", "Problem Solving"], "minimum_marks": 45,
+            "future_scope": "Accounts support, payroll, bookkeeping, finance operations, and progression to professional accounting qualifications.", "difficulty_level": "Moderate", "status": True,
+        },
+    ]
+
+    for item in additional_careers:
+        key = item.pop("key")
+        careers[key] = add_career(db, item)
+
+    return careers
 
 
 def seed_roadmaps(db, careers):
@@ -280,6 +420,58 @@ def seed_roadmaps(db, careers):
             ("Professional Growth", "Pursue B.Ed, certifications, and specialization in educational technology.", ["Subject Knowledge", "Leadership"], ["Education Courses"]),
         ],
     }
+
+    department_roadmaps = {
+        "Technology": [
+            ("Build technical foundations", "Strengthen computing, mathematics, logical reasoning, and safe digital practices.", ["Programming", "Problem Solving"], ["CS50", "Khan Academy Mathematics"]),
+            ("Practise with guided projects", "Complete small practical projects and document what you learned, tested, and improved.", ["Programming", "Communication"], ["freeCodeCamp", "GitHub Skills"]),
+            ("Prepare for a pathway", "Choose a degree, certification, or supervised entry pathway and build evidence of your skills.", ["Research", "Communication"], ["Career pathway research"]),
+        ],
+        "Engineering": [
+            ("Strengthen science and mathematics", "Build confidence in mathematics, physics, measurement, and problem solving.", ["Mathematics", "Problem Solving"], ["Khan Academy Mathematics", "Physics learning resources"]),
+            ("Explore engineering practice", "Learn how engineers use design constraints, safety, teamwork, and project planning.", ["Project Management", "Communication"], ["Engineering project examples"]),
+            ("Plan accredited study", "Research local accredited programmes, admission requirements, and practical placements.", ["Research", "Communication"], ["University programme research"]),
+        ],
+        "Business": [
+            ("Build commercial foundations", "Develop numeracy, communication, business awareness, and ethical decision making.", ["Mathematics", "Communication"], ["Excel Easy", "Business studies resources"]),
+            ("Analyse real cases", "Practise spreadsheets, reports, budgets, and short case studies using reliable data.", ["Excel", "Analysis"], ["Google Sheets training", "Business case studies"]),
+            ("Create work-ready evidence", "Build a portfolio of analysis, presentations, and team projects before applying for placements.", ["Presentation", "Communication"], ["LinkedIn career resources"]),
+        ],
+        "Medical": [
+            ("Strengthen science foundations", "Prioritise biology, chemistry, communication, and evidence-based study habits.", ["Research", "Communication"], ["Khan Academy Biology", "Khan Academy Chemistry"]),
+            ("Understand regulated pathways", "Research local admission, accreditation, licensing, and supervised-practice requirements.", ["Research", "Critical Thinking"], ["Official university and regulator websites"]),
+            ("Build professional readiness", "Develop patient-centred communication, ethics, and relevant supervised experience.", ["Helping People", "Communication"], ["Healthcare careers guidance"]),
+        ],
+        "Social Sciences": [
+            ("Develop evidence and communication", "Build writing, research methods, statistics, listening, and ethical reasoning skills.", ["Research", "Communication"], ["Research methods courses"]),
+            ("Explore supervised practice", "Learn the difference between academic study, supervised practice, and regulated professional roles.", ["Critical Thinking", "Helping People"], ["Professional association guidance"]),
+            ("Plan a specialisation", "Compare degree, postgraduate, and professional-registration pathways in your country.", ["Research", "Communication"], ["University programme research"]),
+        ],
+        "Law": [
+            ("Strengthen legal reasoning", "Practise careful reading, clear writing, research, and evidence-based argument.", ["Research", "Communication"], ["Legal writing resources"]),
+            ("Learn the legal pathway", "Review accredited law programmes, entry requirements, and local professional qualification routes.", ["Critical Thinking", "Presentation"], ["Official legal regulator websites"]),
+            ("Build experience ethically", "Seek approved observation, debate, writing, or supervised legal-experience opportunities.", ["Communication", "Presentation"], ["Moot court and debate resources"]),
+        ],
+        "Architecture": [
+            ("Build design and technical foundations", "Strengthen mathematics, visual design, spatial thinking, and physics.", ["Design", "Mathematics"], ["Architecture design resources"]),
+            ("Create a design portfolio", "Develop sketches, models, and design-process documentation that shows iteration and reasoning.", ["Creativity", "Communication"], ["Portfolio guidance"]),
+            ("Research accredited study", "Compare accredited programmes, portfolio requirements, and local professional-registration steps.", ["Research", "Project Management"], ["University programme research"]),
+        ],
+        "Media & Communication": [
+            ("Build reporting and storytelling", "Practise clear writing, interviewing, research, source verification, and digital communication.", ["Communication", "Research"], ["Journalism learning resources"]),
+            ("Publish a small portfolio", "Create ethical, well-sourced articles, reports, or multimedia work and document your process.", ["Writing", "Critical Thinking"], ["Portfolio guidance"]),
+            ("Prepare for placements", "Research newsroom, communications, content, and public-interest media opportunities.", ["Presentation", "Communication"], ["Media careers guidance"]),
+        ],
+        "Science": [
+            ("Strengthen scientific foundations", "Build biology, chemistry, mathematics, data literacy, and evidence-evaluation skills.", ["Research", "Mathematics"], ["Khan Academy science"]),
+            ("Practise investigation", "Complete safe supervised investigations, data analysis, and scientific communication tasks.", ["Data Analysis", "Critical Thinking"], ["Open science learning resources"]),
+            ("Plan field experience", "Compare degree pathways and opportunities for fieldwork, laboratories, sustainability, or research projects.", ["Research", "Communication"], ["University programme research"]),
+        ],
+    }
+
+    for key, career in careers.items():
+        if key not in roadmap_data and career.field in department_roadmaps:
+            roadmap_data[key] = department_roadmaps[career.field]
 
     for key, stages in roadmap_data.items():
         career = careers[key]

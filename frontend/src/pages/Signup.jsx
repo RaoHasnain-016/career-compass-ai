@@ -32,7 +32,7 @@ function getSignupErrorMessage(error) {
     case "auth/popup-blocked":
       return "Your browser blocked the Google sign-in popup. Allow popups for this site and try again.";
     case "auth/unauthorized-domain":
-      return "Google sign-in is not enabled for this address. Open the app using http://localhost:8000 or add this domain in Firebase Authentication settings.";
+      return "Google sign-in is not authorized for this address. For local Vite development, use http://localhost:5173 and add localhost in Firebase Authentication > Settings > Authorized domains. This does not change the live domain.";
     case "auth/operation-not-allowed":
       return "Google sign-in is disabled. Enable the Google provider in Firebase Authentication settings.";
     case "auth/network-request-failed":
@@ -42,6 +42,10 @@ function getSignupErrorMessage(error) {
     default:
       return error?.message || "Signup failed. Please try again.";
   }
+}
+
+function isGoogleUser(user) {
+  return user?.providerData?.some((provider) => provider.providerId === "google.com");
 }
 
 function Signup() {
@@ -65,9 +69,15 @@ function Signup() {
         return;
       }
 
-      await currentUser.reload();
+      if (!isGoogleUser(currentUser)) {
+        try {
+          await currentUser.reload();
+        } catch (error) {
+          console.error("Firebase reload failed:", error);
+        }
+      }
 
-      if (auth.currentUser?.emailVerified) {
+      if (auth.currentUser?.emailVerified || isGoogleUser(auth.currentUser)) {
         try {
           await syncFirebaseUser(auth.currentUser);
         } catch (error) {

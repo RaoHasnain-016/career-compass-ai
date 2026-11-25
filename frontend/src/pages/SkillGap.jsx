@@ -15,6 +15,7 @@ function asArray(value) {
 export default function SkillGap() {
   const [profile, setProfile] = useState(null);
   const [recommendations, setRecommendations] = useState([]);
+  const [selectedCareerId, setSelectedCareerId] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -33,6 +34,7 @@ export default function SkillGap() {
         if (active) {
           setProfile(profileData);
           setRecommendations(recommendationData);
+          setSelectedCareerId(String(profileData?.selected_career_id || recommendationData[0]?.career_id || ""));
         }
       } catch (error) {
         console.error(error);
@@ -49,8 +51,10 @@ export default function SkillGap() {
     };
   }, []);
 
-  const topRecommendation = recommendations.find((item) => item.career_id === profile?.selected_career_id) || recommendations[0] || null;
-  const currentSkills = asArray(profile?.skills);
+  const topRecommendation = recommendations.find((item) => String(item.career_id) === selectedCareerId)
+    || recommendations.find((item) => item.career_id === profile?.selected_career_id)
+    || recommendations[0]
+    || null;
   const matchedSkills = asArray(topRecommendation?.matched_skills);
   const missingSkills = asArray(topRecommendation?.missing_skills);
   const readiness = useMemo(() => {
@@ -91,12 +95,28 @@ export default function SkillGap() {
       <header className="cc-page-header">
         <div>
           <h1>Skill Gap Analysis</h1>
-          <p>Focused on your top recommendation: {topRecommendation.title}.</p>
+          <p>Choose any recommendation to view its own matched and missing skills.</p>
         </div>
         <Link className="cc-btn" to={`/resources?careerId=${topRecommendation.career_id}`}>
           Find Learning Resources
         </Link>
       </header>
+
+      <section className="cc-card skill-gap-picker">
+        <label htmlFor="career-skill-gap">Career recommendation</label>
+        <select
+          id="career-skill-gap"
+          className="cc-select"
+          value={selectedCareerId}
+          onChange={(event) => setSelectedCareerId(event.target.value)}
+        >
+          {recommendations.map((recommendation) => (
+            <option key={recommendation.career_id} value={recommendation.career_id}>
+              {recommendation.title} — {Math.round(Number(recommendation.match_score) || 0)}% match
+            </option>
+          ))}
+        </select>
+      </section>
 
       <section className="cc-card">
         <h2>Career Readiness: {readiness}%</h2>
@@ -107,16 +127,16 @@ export default function SkillGap() {
 
       <div className="cc-grid two">
         <section className="cc-card">
-          <h2>Your Current Skills</h2>
+          <h2>Matched Skills for {topRecommendation.title}</h2>
           <div className="cc-chip-list">
-            {(currentSkills.length ? currentSkills : matchedSkills).map((skill) => (
+            {(matchedSkills.length ? matchedSkills : ["No mapped skill matches yet"]).map((skill) => (
               <span key={skill}>{skill}</span>
             ))}
           </div>
         </section>
 
         <section className="cc-card">
-          <h2>Skills To Improve</h2>
+          <h2>Skills To Improve for {topRecommendation.title}</h2>
           <div className="cc-chip-list weak">
             {(missingSkills.length ? missingSkills : ["No major skill gaps found"]).map((skill) => (
               <span key={skill}>{skill}</span>
