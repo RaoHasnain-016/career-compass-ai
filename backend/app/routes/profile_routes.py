@@ -5,6 +5,7 @@ from app.database import get_db
 from app.models.user_model import User
 from app.models.profile_model import StudentProfile
 from app.schemas.profile_schema import StudentProfileCreate, StudentProfileUpdate
+from app.services.student_updates_service import record_student_update
 from app.utils.auth_dependency import get_current_firebase_user
 
 router = APIRouter(
@@ -25,6 +26,17 @@ def get_current_db_user(firebase_user, db: Session):
         )
 
     return user
+
+
+def profile_field_changed(profile, field, value):
+    current = getattr(profile, field)
+    if current is None or value is None:
+        return current != value
+    if field == "selected_career_id":
+        return str(current) != str(value)
+    if field == "marks_cgpa":
+        return float(current) != value
+    return current != value
 
 
 @router.post("/profile")
@@ -63,6 +75,10 @@ def create_profile(
     )
 
     db.add(profile)
+    record_student_update(
+        db, user.user_id, category="profile", title="Student profile created",
+        summary="Your education and interests are ready to use for personalised guidance.", url="/profile-setup",
+    )
     db.commit()
     db.refresh(profile)
 
@@ -143,9 +159,21 @@ def update_profile(
         )
 
     update_data = profile_data.model_dump(exclude_unset=True)
+    changed = {key for key, value in update_data.items() if profile_field_changed(profile, key, value)}
 
     for key, value in update_data.items():
         setattr(profile, key, value)
+
+    if "selected_career_id" in changed:
+        record_student_update(
+            db, user.user_id, category="recommendations", title="Active career updated",
+            summary="Your roadmap and learning priorities reflect your active career choice.", url="/skill-gap",
+        )
+    if changed - {"selected_career_id"}:
+        record_student_update(
+            db, user.user_id, category="profile", title="Student profile updated",
+            summary="Your profile was saved. Generate new recommendations to reflect these changes.", url="/recommendations",
+        )
 
     db.commit()
     db.refresh(profile)

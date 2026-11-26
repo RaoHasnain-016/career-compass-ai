@@ -1,0 +1,355 @@
+.student-notification {
+  position: relative;
+  flex: 0 0 auto;
+  color: #0f172a;
+  font-weight: 400;
+}
+
+.student-notification .student-bell-button,
+.student-notification-item .student-mark-button {
+  display: inline-grid;
+  place-items: center;
+  border: 1px solid #dce5f0;
+  border-radius: 12px;
+  color: #164d80;
+  background: #f5f9ff;
+  cursor: pointer;
+}
+
+.student-notification .student-bell-button {
+  width: 44px;
+  height: 44px;
+  position: relative;
+  padding: 0;
+  font-size: 1rem;
+}
+
+.student-notification .student-bell-button:hover,
+.student-notification .student-bell-button[aria-expanded="true"],
+.student-notification-item .student-mark-button:hover:not(:disabled) {
+  background: #e8f2ff;
+}
+
+.student-bell-count {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  min-width: 20px;
+  padding: 2px 4px;
+  border: 2px solid #fff;
+  border-radius: 999px;
+  color: #fff;
+  background: #b52e45;
+  font-size: .65rem;
+  font-weight: 800;
+  line-height: 1.2;
+  text-align: center;
+}
+
+.student-bell-panel {
+  position: absolute;
+  z-index: 45;
+  inset: calc(100% + 10px) 0 auto auto;
+  width: min(26rem, calc(100vw - 96px));
+  max-height: min(34rem, 68vh);
+  max-height: min(34rem, 68dvh);
+  overflow: auto;
+  overscroll-behavior: contain;
+  background: #fff;
+  border: 1px solid #dce5f0;
+  border-radius: 16px;
+  box-shadow: 0 18px 45px rgba(15, 23, 42, .16);
+}
+
+.student-bell-heading,
+.student-updates-heading {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 8px 16px;
+}
+
+.student-bell-heading {
+  padding: 10px 16px;
+  border-bottom: 1px solid #e5edf5;
+}
+
+.student-bell-heading h2,
+.student-updates-heading h2 {
+  margin: 0;
+  font-size: 1.1rem;
+  line-height: 1.3;
+}
+
+.student-updates-heading h2 svg {
+  color: var(--student-primary);
+  vertical-align: -.08em;
+}
+
+.student-bell-heading .student-update-text-button {
+  min-height: 40px;
+  padding: 8px;
+  color: #115b9d;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  cursor: pointer;
+  font-weight: 700;
+  font-size: .85rem;
+}
+
+.student-bell-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 46px;
+  padding: 12px 16px;
+  border-top: 1px solid #e5edf5;
+  font-size: .87rem;
+  font-weight: 750;
+  color: #115b9d;
+}
+
+.student-bell-footer:hover {
+  background: #f1f7ff;
+}
+
+.student-notification-list,
+.study-option-list {
+  list-style: none;
+  padding: 0;
+  margin: 12px 0 0;
+  display: grid;
+  gap: 12px;
+}
+
+.student-notification-list.compact {
+  margin: 0;
+  gap: 0;
+}
+
+.student-notification-item {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid #e1e9f3;
+  border-radius: 12px;
+  background: #fff;
+}
+
+.student-notification-item.unread {
+  background: #f4f8ff;
+}
+
+.student-notification-list.compact .student-notification-item {
+  align-items: start;
+  border: 0;
+  border-radius: 0;
+  border-bottom: 1px solid #e5edf5;
+  padding: 12px 14px;
+  gap: 8px;
+}
+
+.student-notification-list.compact .student-notification-item:last-child {
+  border-bottom: 0;
+}
+
+.student-update-icon {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border-radius: 9px;
+  background: #eaf4ff;
+  color: #135c9f;
+}
+
+.student-update-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+  color: #475569;
+  font-size: .78rem;
+  font-weight: 650;
+}
+
+.student-unread-label,
+.student-updates-count {
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: #e1eeff;
+  color: #154a85;
+  font-size: .75rem;
+  font-weight: 750;
+}
+
+.student-notification-content h3,
+.study-option h3 {
+  margin: 4px 0 0;
+  font-size: 1rem;
+  line-height: 1.4;
+}
+
+.student-notification-content p,
+.study-option p,
+.student-updates-card > p {
+  margin: 8px 0 0;
+  color: #475569;
+  font-size: .94rem;
+  line-height: 1.55;
+}
+
+.student-update-source,
+.study-option .student-update-source,
+.student-updates-card > .student-update-source {
+  margin-top: 7px;
+  color: #475569;
+  font-size: .8rem;
+  line-height: 1.45;
+}
+
+.student-notification-item .student-mark-button {
+  width: 44px;
+  height: 44px;
+  font-size: 1rem;
+  padding: 0;
+}
+
+.student-update-link {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-height: 36px;
+  padding: 4px 0;
+  color: #115b9d;
+  font-size: .86rem;
+  font-weight: 750;
+}
+
+.student-update-link:hover {
+  text-decoration: underline;
+}
+
+.student-update-link svg {
+  font-size: .7rem;
+}
+
+.student-notification button:focus-visible,
+.student-notification a:focus-visible,
+.student-updates-page button:focus-visible,
+.student-updates-page a:focus-visible {
+  outline: 2px solid #176fc3;
+  outline-offset: 2px;
+}
+
+.student-updates-status {
+  margin: 10px 0;
+  padding: 10px 12px;
+  border-radius: 9px;
+  background: #f1f5f9;
+  color: #475569;
+  font-size: .88rem;
+  line-height: 1.45;
+}
+
+.student-bell-panel .student-updates-status {
+  margin: 10px 12px;
+}
+
+.student-updates-status.warning {
+  background: #fff4dd;
+  color: #754605;
+}
+
+.student-updates-page {
+  max-width: 1300px;
+  width: 100%;
+  padding-bottom: 88px;
+}
+
+.student-updates-empty {
+  color: #475569;
+  padding: 26px 8px 8px;
+  text-align: center;
+}
+
+.student-updates-empty svg {
+  color: #135c9f;
+}
+
+.student-update-actions {
+  flex: 0 0 auto;
+}
+
+.student-study-results {
+  display: grid;
+  gap: 16px;
+}
+
+.student-updates-card .study-pathway,
+.study-option .study-option-program {
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.student-updates-card,
+.study-option {
+  min-width: 0;
+}
+
+.study-option {
+  padding: 14px;
+  border: 1px solid #e1e9f3;
+  border-radius: 12px;
+  background: #fff;
+}
+
+@media (max-width: 1000px) {
+  .rec-top-actions:has(.student-notification) {
+    gap: 8px;
+  }
+
+  .rec-top-actions:has(.student-notification) .rec-search {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+}
+
+@media (max-width: 700px) {
+  .student-bell-panel {
+    width: min(26rem, calc(100vw - 38px));
+  }
+
+  .dashboard-user-area .student-bell-panel {
+    right: -46px;
+  }
+
+  .student-update-actions {
+    flex-wrap: wrap;
+  }
+
+  .student-update-actions .cc-btn {
+    flex: 1 1 auto;
+  }
+
+  .student-notification-item,
+  .student-notification-list.compact .student-notification-item {
+    padding: 10px;
+    gap: 8px;
+  }
+
+  .student-update-icon {
+    width: 28px;
+    height: 28px;
+  }
+
+  .student-update-link {
+    min-height: 44px;
+  }
+}

@@ -20,7 +20,6 @@ import {
   YAxis,
 } from "recharts";
 import {
-  FaBell,
   FaBookmark,
   FaBookOpen,
   FaChartLine,
@@ -37,6 +36,7 @@ import {
 import { signOut } from "firebase/auth";
 import { auth } from "../firebase/firebase";
 import Sidebar from "../components/Sidebar";
+import NotificationBell from "../components/NotificationBell";
 import { getDashboardData } from "../services/dashboardService";
 import { generateCareerRecommendations } from "../services/recommendationService";
 import "../styles/dashboard-page.css";
@@ -361,9 +361,7 @@ function Dashboard() {
 
           <div className="dashboard-user-area">
             <span>Welcome, {computed.userName}</span>
-            <button type="button">
-              <FaBell />
-            </button>
+            <NotificationBell />
             <img
               src={
                 auth.currentUser?.photoURL ||

@@ -13,7 +13,6 @@ import {
   YAxis,
 } from "recharts";
 import {
-  FaBell,
   FaBolt,
   FaBookOpen,
   FaBookmark,
@@ -39,6 +38,7 @@ import {
 import { signOut } from "firebase/auth";
 import { auth } from "../firebase/firebase";
 import Sidebar from "../components/Sidebar";
+import NotificationBell from "../components/NotificationBell";
 import {
   generateCareerRecommendations,
   getMyRecommendations,
@@ -366,9 +366,7 @@ function Recommendations() {
               />
             </div>
 
-            <button type="button">
-              <FaBell />
-            </button>
+            <NotificationBell />
 
             <img
               src={

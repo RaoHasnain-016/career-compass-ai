@@ -20,6 +20,8 @@ from app.models import (
     SavedCareer,
     ChatMessage,
     VideoResource,
+    StudentUpdate,
+    StudentUpdateRead,
 )
 
 from app.routes import (
@@ -32,6 +34,7 @@ from app.routes import (
     chatbot_routes,
     saved_career_routes,
     admin_routes,
+    student_update_routes,
 )
 
 
@@ -87,6 +90,8 @@ def apply_startup_schema_patches():
                 "ALTER TABLE student_profiles ADD COLUMN IF NOT EXISTS selected_career_id UUID"
             )
         )
+        StudentUpdate.__table__.create(connection, checkfirst=True)
+        StudentUpdateRead.__table__.create(connection, checkfirst=True)
 
 
 # CORS setup for React/Vite frontend
@@ -149,6 +154,7 @@ app.include_router(roadmap_routes.router)
 app.include_router(chatbot_routes.router)
 app.include_router(saved_career_routes.router)
 app.include_router(admin_routes.router)
+app.include_router(student_update_routes.router)
 
 
 # In production, serve the React build from this same FastAPI origin. This

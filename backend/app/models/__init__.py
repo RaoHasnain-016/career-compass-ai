@@ -7,3 +7,4 @@ from app.models.resource_model import LearningResource
 from app.models.saved_career_model import SavedCareer
 from app.models.chat_model import ChatMessage
 from app.models.video_resource_model import VideoResource
+from app.models.student_update_model import StudentUpdate, StudentUpdateRead

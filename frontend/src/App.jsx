@@ -26,6 +26,8 @@ const SavedCareers = lazy(() => import("./pages/SavedCareers"));
 const CompareCareers = lazy(() => import("./pages/CompareCareers"));
 const StudentProfile = lazy(() => import("./pages/StudentProfile"));
 const Settings = lazy(() => import("./pages/Settings"));
+const Notifications = lazy(() => import("./pages/Notifications"));
+const Universities = lazy(() => import("./pages/Universities"));
 const HelpFAQ = lazy(() => import("./pages/HelpFAQ"));
 const ContactUs = lazy(() => import("./pages/ContactUs"));
 const AboutProject = lazy(() => import("./pages/AboutProject"));
@@ -87,6 +89,8 @@ function App() {
         <Route path="/compare-careers" element={protectedPage(<CompareCareers />)} />
         <Route path="/profile" element={protectedPage(<StudentProfile />)} />
         <Route path="/settings" element={protectedPage(<Settings />)} />
+        <Route path="/notifications" element={protectedPage(<Notifications />)} />
+        <Route path="/universities" element={protectedPage(<Universities />)} />
         <Route path="/help" element={protectedPage(<HelpFAQ />)} />
         <Route path="/no-recommendation" element={protectedPage(<NoRecommendationFound />)} />
 

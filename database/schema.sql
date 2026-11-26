@@ -94,3 +94,22 @@ CREATE INDEX idx_users_firebase_uid ON users(firebase_uid);
 CREATE INDEX idx_profiles_user_id ON student_profiles(user_id);
 CREATE INDEX idx_resources_skill ON learning_resources(skill);
 CREATE INDEX idx_saved_user_id ON saved_careers(user_id);
+
+CREATE TABLE student_updates (
+  update_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id UUID NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+  category VARCHAR(24) NOT NULL,
+  title VARCHAR(180) NOT NULL,
+  summary TEXT NOT NULL,
+  url VARCHAR(120) NOT NULL,
+  published_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX ix_student_updates_user_date ON student_updates (user_id, published_at);
+
+CREATE TABLE student_update_reads (
+  user_id UUID NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+  notification_id VARCHAR(120) NOT NULL,
+  read_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (user_id, notification_id)
+);

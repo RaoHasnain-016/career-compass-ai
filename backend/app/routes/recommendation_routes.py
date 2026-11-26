@@ -7,6 +7,7 @@ from app.models.profile_model import StudentProfile
 from app.models.career_model import Career
 from app.models.recommendation_model import Recommendation
 from app.services.recommendation_service import generate_recommendation_analysis
+from app.services.student_updates_service import record_student_update
 from app.utils.auth_dependency import get_current_firebase_user
 
 router = APIRouter(
@@ -92,7 +93,6 @@ def generate_recommendations(
     db.query(Recommendation).filter(
         Recommendation.user_id == user.user_id
     ).delete()
-    db.commit()
 
     generated_recommendations = []
 
@@ -121,6 +121,11 @@ def generate_recommendations(
         db.add(recommendation)
         generated_recommendations.append(recommendation)
 
+    record_student_update(
+        db, user.user_id, category="recommendations", title="New career recommendations",
+        summary="Your recommendations were refreshed. Open them to compare careers and review your learning gaps.",
+        url="/recommendations",
+    )
     db.commit()
 
     for recommendation in generated_recommendations:

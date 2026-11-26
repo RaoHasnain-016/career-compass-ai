@@ -1,11 +1,13 @@
 import { Link, useLocation } from "react-router-dom";
 import {
+  FaBell,
   FaBookOpen,
   FaBookmark,
   FaChartLine,
   FaCog,
   FaCompass,
   FaHome,
+  FaGraduationCap,
   FaQuestionCircle,
   FaRobot,
   FaRoute,
@@ -14,8 +16,10 @@ import {
 
 const items = [
   ["/dashboard", "Dashboard", <FaHome />],
+  ["/notifications", "Notifications", <FaBell />],
   ["/profile-setup", "Profile Setup", <FaCompass />],
   ["/recommendations", "Recommendations", <FaChartLine />],
+  ["/universities", "Study Options", <FaGraduationCap />],
   ["/roadmap", "Roadmap", <FaRoute />],
   ["/skill-gap", "Skill Gap", <FaChartLine />],
   ["/resources", "Resources", <FaBookOpen />],
@@ -41,12 +45,13 @@ export default function Sidebar() {
         </div>
       </Link>
 
-      <nav className="student-nav">
+      <nav className="student-nav" aria-label="Student navigation">
         {items.map(([to, label, icon]) => (
           <Link
             key={to}
             to={to}
             className={location.pathname === to ? "active" : ""}
+            aria-current={location.pathname === to ? "page" : undefined}
           >
             {icon}
             <span>{label}</span>
