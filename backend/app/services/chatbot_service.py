@@ -192,24 +192,41 @@ _PROFILE_QUESTIONS = {
     "show video lessons for my missing skills": "videos",
 }
 
+_FALLBACK_QUESTIONS = (
+    ("videos", r"\b(videos?|youtube)\b"),
+    ("resources", r"\b(resources?|courses?|lessons?|tutorials?)\b"),
+    ("roadmap", r"\b(road\s?map|next steps?|study plan)\b"),
+    ("skills", r"\b(skills?|learn first|what should i learn)\b"),
+    ("match", r"\b(my career|best career|career match|recommendations?)\b"),
+)
 
-def answer_from_saved_guidance(user_message: str, context: str):
+
+def answer_from_saved_guidance(user_message: str, context: str, *, fallback=False):
     question = user_message.strip().casefold().rstrip(".?!")
     topic = _PROFILE_QUESTIONS.get(question)
+    mode = "knowledge_fallback" if fallback else "profile_guidance"
+    if topic is None and fallback:
+        topic = next((intent for intent, pattern in _FALLBACK_QUESTIONS if re.search(pattern, question)), None)
+        if topic is None:
+            return ChatbotReply(
+                "I can guide you through your career matches, missing skills, roadmap, and saved lessons. "
+                "Try a suggested question for one of those topics.",
+                mode,
+            )
     if topic is None:
         return None
 
     data = json.loads(context)
     profile = data.get("profile")
     if not profile:
-        return ChatbotReply("Complete Profile Setup to get guidance for your education stage and skills.", "profile_guidance")
+        return ChatbotReply("Complete Profile Setup to get guidance for your education stage and skills.", mode)
 
     recommendations = data["recommendations"]
     selected = data["selected_career"]
     career = selected or next(iter(recommendations), {})
     title = career.get("title")
     if not title:
-        return ChatbotReply("Generate your career recommendations, then choose a path to explore.", "profile_guidance")
+        return ChatbotReply("Generate your career recommendations, then choose a path to explore.", mode)
 
     recommendation = next((row for row in recommendations if row.get("title") == title), {})
     replies = {
@@ -243,7 +260,7 @@ def answer_from_saved_guidance(user_message: str, context: str):
             f"Try these saved resources for **{title}**.\n" + "\n".join(items[:3]) if items else
             f"Open Learning Resources to find lessons and videos for **{title}**."
         )
-    return ChatbotReply(replies[topic], "profile_guidance")
+    return ChatbotReply(replies[topic], mode)
 
 
 

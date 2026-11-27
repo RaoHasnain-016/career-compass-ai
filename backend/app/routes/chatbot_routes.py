@@ -211,11 +211,8 @@ def ask_chatbot(
             ai_response = answer_from_saved_guidance(request.message, context)
             if ai_response is None:
                 ai_response = ask_career_chatbot(user_message=request.message.strip(), context=context)
-    except ChatbotServiceError as error:
-        raise HTTPException(
-            status_code=error.status_code,
-            detail=error.detail,
-        ) from error
+    except ChatbotServiceError:
+        ai_response = answer_from_saved_guidance(request.message, context, fallback=True)
 
     chat_message = ChatMessage(
         user_id=user_id,

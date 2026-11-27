@@ -8,7 +8,6 @@ from uuid import uuid4
 
 import firebase_admin
 import httpx
-from fastapi import HTTPException
 from openai import (
     APIConnectionError,
     APIStatusError,
@@ -202,25 +201,19 @@ class ChatbotRouteTests(unittest.TestCase):
             db=self.db,
         )
 
-    def test_provider_failures_return_http_errors_without_saving_chat_history(self):
+    def test_provider_failures_return_saved_guidance_without_provider_diagnostics(self):
+        self.db.refresh.side_effect = lambda message: setattr(message, "message_id", uuid4())
         for status_code in (502, 503, 504):
             with self.subTest(status_code=status_code):
                 self.ask_provider.side_effect = chatbot_service.ChatbotServiceError(
                     status_code=status_code,
-                    detail="Chat is temporarily unavailable. Please try again.",
+                    detail="Private provider diagnostic.",
                 )
-
-                with self.assertRaises(HTTPException) as raised:
-                    self.ask()
-
-                self.assertEqual(raised.exception.status_code, status_code)
-                self.assertEqual(
-                    raised.exception.detail,
-                    "Chat is temporarily unavailable. Please try again.",
-                )
-                self.db.add.assert_not_called()
-                self.db.commit.assert_not_called()
-                self.db.refresh.assert_not_called()
+                with patch.object(chatbot_routes, "build_chatbot_context", return_value='{"profile":null}'):
+                    response = self.ask()
+                self.assertEqual(response["reply_mode"], "knowledge_fallback")
+                self.assertIn("Profile Setup", response["response"])
+                self.assertNotIn("Private provider diagnostic", response["response"])
 
     def test_successful_answer_is_saved_and_returned(self):
         self.ask_provider.return_value = "Start by reviewing your missing skills."
