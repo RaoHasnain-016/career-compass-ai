@@ -1,0 +1,91 @@
+name: Train chatbot pilots
+
+on:
+  push:
+    branches: [chatbot-training]
+
+permissions:
+  contents: read
+
+jobs:
+  train:
+    name: Train ${{ matrix.name }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: smollm2-135m
+            model: HuggingFaceTB/SmolLM2-135M-Instruct
+            revision: 12fd25f77366fa6b3b4b768ec3050bf629380bac
+          - name: qwen3-0.6b
+            model: Qwen/Qwen3-0.6B
+            revision: c1899de289a04d12100db370d81485cdf75e47ca
+    defaults:
+      run:
+        working-directory: backend
+    env:
+      CHATBOT_BASE_MODEL: ${{ matrix.model }}
+      CHATBOT_BASE_REVISION: ${{ matrix.revision }}
+      CHATBOT_CHECKPOINT: ml/artifacts/chatbot-training/base
+      CHATBOT_ARTIFACT: ml/artifacts/chatbot-training/${{ matrix.name }}
+      HF_HUB_DISABLE_TELEMETRY: "1"
+      HF_HUB_DOWNLOAD_TIMEOUT: "180"
+      TOKENIZERS_PARALLELISM: "false"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Validate the synthetic conversations
+        run: python -B -m ml.train_chatbot --validate-only
+
+      - name: Install the CPU training environment
+        run: |
+          python -m pip install --index-url https://download.pytorch.org/whl/cpu 'torch==2.7.1+cpu'
+          python -m pip install -r ml/requirements-chat-training.txt 'transformers==4.57.3' 'peft==0.18.0'
+
+      - name: Fetch the pinned base checkpoint
+        run: |
+          python - <<'PY'
+          import os
+          from huggingface_hub import snapshot_download
+
+          snapshot_download(
+              repo_id=os.environ["CHATBOT_BASE_MODEL"],
+              revision=os.environ["CHATBOT_BASE_REVISION"],
+              local_dir=os.environ["CHATBOT_CHECKPOINT"],
+              allow_patterns=[
+                  "config.json", "generation_config.json", "*.safetensors", "*.safetensors.index.json",
+                  "tokenizer.json", "tokenizer_config.json", "special_tokens_map.json",
+                  "added_tokens.json", "chat_template.jinja", "vocab.json", "merges.txt",
+              ],
+              max_workers=2,
+          )
+          PY
+
+      - name: Train and record held-out loss
+        run: |
+          python -B -m ml.train_chatbot \
+            --model "$CHATBOT_CHECKPOINT" --local-files-only \
+            --base-model-id "$CHATBOT_BASE_MODEL" --revision "$CHATBOT_BASE_REVISION" \
+            --out "$CHATBOT_ARTIFACT/adapter" --device cpu --threads 4 --epochs 2 --max-length 640
+
+      - name: Compare held-out replies
+        run: |
+          python -B -m ml.evaluate_chatbot \
+            --model "$CHATBOT_CHECKPOINT" --adapter "$CHATBOT_ARTIFACT/adapter" \
+            --out "$CHATBOT_ARTIFACT/heldout-replies.json" --device cpu --threads 4
+
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() && hashFiles(format('backend/{0}/adapter/evaluation.json', env.CHATBOT_ARTIFACT)) != '' }}
+        with:
+          name: chatbot-pilot-${{ matrix.name }}
+          path: backend/${{ env.CHATBOT_ARTIFACT }}
+          if-no-files-found: error
+          retention-days: 14

@@ -62,6 +62,28 @@ The chat's suggested career, skill-gap, roadmap, resource and video questions us
 
 Keep verified source updates separate from training. Add corrections and adviser-reviewed relevance labels to a new dataset version, retrain offline, compare on held-out profiles, and version the model artifact. The model does not treat student messages as training data or update its weights automatically. A future LoRA adapter can improve language or response style after you curate and evaluate a separate career Q&A dataset.
 
+### Run the conversational training pilot
+
+`backend/ml/data/chatbot_pilot.jsonl` contains synthetic English, Urdu and Roman Urdu conversations. Scenario IDs stay within one split. The trainer uses the user's question, synthetic profile context and earlier turns to predict the current assistant reply. Its loss only counts that reply. Download the Transformers checkpoint separately from the GGUF runtime file, and install the training packages in a dedicated environment.
+
+Run these commands from `backend`.
+
+```powershell
+python -B -m ml.train_chatbot --validate-only
+python -m venv .llm-tools/chat-training-venv
+$chatPython = ".\.llm-tools\chat-training-venv\Scripts\python.exe"
+& $chatPython -m pip install -r ml/requirements-chat-training.txt
+& $chatPython -B -m ml.train_chatbot --model HuggingFaceTB/SmolLM2-135M-Instruct --revision 12fd25f77366fa6b3b4b768ec3050bf629380bac --out ml/artifacts/chatbot-adapter-v1 --device cpu
+```
+
+Use `--max-steps 4` for a short training smoke test. The adapter and its evaluation report are written together to a new directory. The adapter runs with the exact base checkpoint recorded in its metadata. For an offline run, point `--model` at a local copy and add `--local-files-only`. The trainer can also dequantize the existing SmolLM2 GGUF file using `--gguf` and the matching local config and tokenizer. Record the GGUF digest with `--gguf-sha256` and add `--dequantize-gguf` to the evaluation command to compare outputs against those same dequantized weights.
+
+```powershell
+& $chatPython -B -m ml.evaluate_chatbot --model .local-models/smollm2-135m-instruct-sft --adapter ml/artifacts/chatbot-adapter-v1 --out ml/artifacts/chatbot-holdout-v1.json
+```
+
+The comparison records replies and latency from the same held-out prompts. Review fluency, relevance, language, education-stage fit and unsupported facts before promoting a candidate. Token loss measures how closely the model fits the reference replies. This small pilot is intended to verify the training workflow, with a stronger multilingual model and adviser-reviewed data required for a student-facing quality evaluation.
+
 ## 6. Stage on AWS after evaluation
 
 Version the ranker artifact, metadata and evaluation report together. Keep the GGUF and ranker artifacts in private storage. Use the existing Sydney app release flow and configure absolute local artifact paths in the backend environment. In Recommendations, choose **Preview Trained Ranking** from the sort menu to compare the pilot order with the default rule order. The preview uses existing recommendations and preserves their rule match scores. The ranker can be deployed independently of the chatbot.
