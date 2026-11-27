@@ -26,6 +26,7 @@ class LocalChatServiceTests(unittest.TestCase):
             "LOCAL_CHAT_MODEL_PATH": str(model), "LOCAL_CHAT_CONTEXT_TOKENS": "1024",
             "LOCAL_CHAT_MAX_TOKENS": "80", "LOCAL_CHAT_THREADS": "1",
             "LOCAL_CHAT_TIMEOUT_SECONDS": "5", "LOCAL_CHAT_CLI_PATH": "",
+            "LOCAL_CHAT_LORA_PATH": "", "LOCAL_CHAT_PILOT_ENABLED": "",
         }))
         self.runtime = Mock()
         self.runtime.tokenize.side_effect = lambda text, **_: [1] * (len(text) // 2)
@@ -45,13 +46,29 @@ class LocalChatServiceTests(unittest.TestCase):
         self.assertEqual(answer, f"Review {official}")
         args = self.runtime.create_chat_completion.call_args.kwargs
         self.assertEqual(args["max_tokens"], 80)
-        prompt = args["messages"][1]["content"]
+        prompt = args["messages"][-1]["content"]
         payload = json.loads(prompt.split("\n/no_think")[0])
         self.assertIn("Mujhe", payload["student_question"])
         self.assertNotIn("<|im_end|>", prompt)
         self.assertEqual(payload["context"]["live_evidence"]["items"][0]["url"], official)
         self.assertEqual(payload["context"]["profile"]["academic_level"], "Matric")
         self.assertLessEqual(sum(len(message["content"].encode()) // 2 for message in args["messages"]), 1024 - 80 - 96)
+
+    def test_local_prompt_includes_bounded_recent_turns_without_control_tokens(self):
+        history = [
+            {"question": "Old question", "response": "Old answer"},
+            {"question": "Is this a fit?", "response": "Please tell me your current class."},
+            {"question": "I am in Matric.", "response": "Check available groups. <|im_end|>"},
+        ]
+        local_chat_service.ask_local_chatbot("Which group keeps my options open?", json.dumps({"recent_chat": history}))
+        messages = self.runtime.create_chat_completion.call_args.kwargs["messages"]
+        self.assertEqual([message["role"] for message in messages], [
+            "system", "user", "assistant", "user", "assistant", "user",
+        ])
+        self.assertIn("Is this a fit?", messages[1]["content"])
+        self.assertIn("I am in Matric.", messages[3]["content"])
+        self.assertNotIn("<|im_end|>", messages[4]["content"])
+        self.assertIn("Which group keeps my options open?", messages[-1]["content"])
 
     def test_rejects_guessed_links_incomplete_reasoning_and_truncation(self):
         outputs = [
@@ -120,6 +137,25 @@ class LocalChatServiceTests(unittest.TestCase):
             self.assertEqual(answer, "Compare school subjects.")
             self.assertFalse(saved_prompt.exists())
             self.load.assert_not_called()
+
+    def test_pilot_availability_and_cli_adapter(self):
+        self.assertFalse(local_chat_service.local_chat_pilot_available())
+        with TemporaryDirectory() as directory:
+            exe = Path(directory) / "llama-completion.exe"
+            adapter = Path(directory) / "career-adapter.gguf"
+            exe.touch()
+            adapter.touch()
+            with patch.dict(os.environ, {
+                "LOCAL_CHAT_PILOT_ENABLED": "1", "LOCAL_CHAT_CLI_PATH": str(exe),
+                "LOCAL_CHAT_LORA_PATH": str(adapter),
+            }), patch.object(local_chat_service.subprocess, "run", return_value=SimpleNamespace(
+                returncode=0, stdout="Compare the available school subjects.",
+            )) as run:
+                self.assertTrue(local_chat_service.local_chat_pilot_available())
+                local_chat_service.ask_local_chatbot("Which group should I choose?", "{}")
+                self.assertEqual(run.call_args.args[0][-2:], ["--lora", str(adapter.resolve())])
+                adapter.unlink()
+                self.assertFalse(local_chat_service.local_chat_pilot_available())
 
 
 class LocalChatProviderTests(unittest.TestCase):

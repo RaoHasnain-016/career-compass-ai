@@ -194,9 +194,9 @@ class ChatbotRouteTests(unittest.TestCase):
             patch.object(chatbot_routes, "ask_career_chatbot")
         )
 
-    def ask(self):
+    def ask(self, mode="guidance", message="  Help me plan my next step.  "):
         return chatbot_routes.ask_chatbot(
-            ChatbotRequest(message="  Help me plan my next step.  "),
+            ChatbotRequest(message=message, mode=mode),
             firebase_user={"uid": "test-user"},
             db=self.db,
         )
@@ -253,6 +253,62 @@ class ChatbotRouteTests(unittest.TestCase):
         self.ask_provider.assert_not_called()
         self.assertEqual(response["reply_mode"], "profile_guidance")
         self.assertEqual(response["response"], "Start with SQL.")
+
+    def test_pilot_is_opt_in_and_keeps_database_connection_out_of_generation(self):
+        self.db.refresh.side_effect = lambda message: setattr(message, "message_id", uuid4())
+        self.ask_provider.return_value = "Saved advice"
+
+        def answer(question, context):
+            self.db.rollback.assert_called()
+            self.assertEqual(question, "  Help me plan my next step.  ")
+            self.assertEqual(context, "context")
+            return "Explore the introductory course."
+
+        with (
+            patch.object(chatbot_routes, "local_chat_pilot_available", return_value=True) as available,
+            patch.object(chatbot_routes, "ask_local_chatbot", side_effect=answer) as local,
+        ):
+            self.assertEqual(self.ask()["response"], "Saved advice")
+            available.assert_not_called()
+            local.assert_not_called()
+            response = self.ask(mode="pilot")
+        self.assertEqual(response["response"], "Explore the introductory course.")
+        self.assertEqual(response["reply_mode"], "conversation_pilot")
+        self.ask_provider.assert_called_once()
+
+    def test_pilot_unavailable_busy_or_too_long_uses_local_guidance(self):
+        self.db.refresh.side_effect = lambda message: setattr(message, "message_id", uuid4())
+        for available, message, invoked in (
+            (False, "Help me plan my next step.", False),
+            (True, "Help me plan my next step.", True),
+            (True, "x" * 1601, False),
+        ):
+            with (
+                self.subTest(available=available, invoked=invoked),
+                patch.object(chatbot_routes, "build_chatbot_context", return_value='{"profile":null}'),
+                patch.object(chatbot_routes, "local_chat_pilot_available", return_value=available),
+                patch.object(chatbot_routes, "ask_local_chatbot", side_effect=chatbot_routes.LocalChatError(
+                    "Private local error",
+                )) as local,
+            ):
+                response = self.ask(mode="pilot", message=message)
+                self.assertEqual(local.called, invoked)
+                self.assertEqual(response["reply_mode"], "knowledge_fallback")
+                self.assertNotIn("Private local error", response["response"])
+        self.ask_provider.assert_not_called()
+
+    def test_pilot_leaves_admissions_questions_with_official_sources(self):
+        self.db.refresh.side_effect = lambda message: setattr(message, "message_id", uuid4())
+        with (
+            patch.dict(os.environ, {"CHATBOT_LIVE_KNOWLEDGE": "0"}),
+            patch.object(chatbot_routes, "local_chat_pilot_available", return_value=True),
+            patch.object(chatbot_routes, "ask_local_chatbot") as local,
+        ):
+            response = self.ask(mode="pilot", message="Are university admissions open?")
+        self.assertEqual(response["reply_mode"], "official_sources")
+        self.assertEqual(response["source_status"], "profile_needed")
+        local.assert_not_called()
+        self.ask_provider.assert_not_called()
 
 
 if __name__ == "__main__":

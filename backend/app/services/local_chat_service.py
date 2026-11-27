@@ -52,6 +52,7 @@ class LocalChatSettings:
     threads: int = 2
     timeout_seconds: float = 40.0
     cli_path: str | None = None
+    lora_path: str | None = None
 
     @classmethod
     def from_environment(cls):
@@ -87,7 +88,31 @@ class LocalChatSettings:
                     or executable.name.casefold() not in {"llama-completion.exe", "llama-completion"}):
                 raise LocalChatError("Set the path to the local llama-completion executable.")
             cli = str(executable)
-        return cls(str(path), context_tokens, max_tokens, threads, timeout, cli or None)
+        lora = os.getenv("LOCAL_CHAT_LORA_PATH", "").strip()
+        if lora:
+            if not cli:
+                raise LocalChatError("A GGUF adapter requires the local llama-completion executable.")
+            if lora.startswith(("\\\\", "//")) or "://" in lora:
+                raise LocalChatError("The configured adapter must be a local GGUF file.")
+            try:
+                adapter = Path(lora).expanduser().resolve(strict=True)
+            except (OSError, RuntimeError) as error:
+                raise LocalChatError("The local GGUF adapter could not be found.") from error
+            if (str(adapter).startswith(("\\\\", "//")) or adapter.suffix.casefold() != ".gguf"
+                    or not adapter.is_file()):
+                raise LocalChatError("The configured adapter must be a local GGUF file.")
+            lora = str(adapter)
+        return cls(str(path), context_tokens, max_tokens, threads, timeout, cli or None, lora or None)
+
+
+def local_chat_pilot_available():
+    if os.getenv("LOCAL_CHAT_PILOT_ENABLED", "").strip().lower() not in {"true", "1"}:
+        return False
+    try:
+        # A separate, short-lived process avoids retaining model memory in the API worker.
+        return LocalChatSettings.from_environment().cli_path is not None
+    except LocalChatError:
+        return False
 
 
 @lru_cache(maxsize=1)
@@ -127,13 +152,24 @@ def _compact(value, depth=0, key=""):
     return value
 
 
-def _render_messages(question, evidence):
+def _user_message(question, evidence):
     packet = json.dumps({"student_question": question, "context": evidence}, ensure_ascii=False, separators=(",", ":"))
-    # Avoid treating user or retrieved markup as Qwen's chat-control tokens.
-    return [
-        {"role": "system", "content": _SYSTEM_PROMPT},
-        {"role": "user", "content": packet.replace("<", "\uff1c") + "\n/no_think"},
-    ]
+    return {"role": "user", "content": packet.replace("<", "\uff1c") + "\n/no_think"}
+
+
+def _render_messages(question, evidence):
+    messages = [{"role": "system", "content": _SYSTEM_PROMPT}]
+    for exchange in evidence.get("recent_chat", []):
+        if isinstance(exchange, dict):
+            previous_question = exchange.get("question")
+            previous_answer = exchange.get("response")
+            if isinstance(previous_question, str) and isinstance(previous_answer, str):
+                messages.extend([
+                    _user_message(previous_question, {}),
+                    {"role": "assistant", "content": previous_answer.replace("<", "\uff1c")},
+                ])
+    current = {key: value for key, value in evidence.items() if key != "recent_chat"}
+    return [*messages, _user_message(question, current)]
 
 
 def _fit_context(runtime, settings, question, raw_context):
@@ -154,7 +190,8 @@ def _fit_context(runtime, settings, question, raw_context):
         value = raw_context.get(key)
         if isinstance(value, list):
             items = []
-            for item in value[:limit]:
+            selected = value[-limit:] if key == "recent_chat" else value[:limit]
+            for item in selected:
                 candidate = [*items, _compact(item)]
                 if fits({**evidence, key: candidate}):
                     items = candidate
@@ -219,8 +256,10 @@ def _ask_local_cli(settings, question, context):
         arguments = [
             settings.cli_path, "--offline", "--no-conversation", "--no-display-prompt", "--color", "off",
             "-m", settings.model_path, "-c", str(settings.context_tokens), "-n", str(settings.max_tokens),
-            "-t", str(settings.threads), "--temp", "0.25", "-f", str(prompt_path),
+            "-b", "64", "-ub", "64", "-t", str(settings.threads), "--temp", "0.25", "-f", str(prompt_path),
         ]
+        if settings.lora_path:
+            arguments.extend(["--lora", settings.lora_path])
         try:
             result = subprocess.run(
                 arguments, stdin=subprocess.DEVNULL, capture_output=True, encoding="utf-8", errors="replace",

@@ -1,0 +1,103 @@
+name: Package chatbot candidates
+
+on:
+  push:
+    branches: [chatbot-package]
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  package:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: smollm2-135m
+            file: SmolLM2-135M-Instruct.Q4_K_S.gguf
+            url: https://huggingface.co/QuantFactory/SmolLM2-135M-Instruct-GGUF/resolve/476854d00ede130660aba430d15f9347ad2e7d0e/SmolLM2-135M-Instruct.Q4_K_S.gguf
+            sha256: dbc574efbba3ea85e086cf16b3f0f1d7dc0b50e68645b7034c664dc4255685f2
+          - name: qwen3-0.6b
+            file: Qwen3-0.6B-Q4_K_M.gguf
+            url: https://huggingface.co/unsloth/Qwen3-0.6B-GGUF/resolve/50968a4468ef4233ed78cd7c3de230dd1d61a56b/Qwen3-0.6B-Q4_K_M.gguf
+            sha256: ac2d97712095a558e31573f62f466a3f9d93990898b0ec79d7c974c1780d524a
+    env:
+      LLAMA_TAG: b12814
+      LLAMA_COMMIT: e7ec6361dc3c57ca6ffb773c750daaa90196b1c5
+      LLAMA_SHA256: c1d9820582e612c48b7842b6f85c1fec44000d012eab98d8b7afcc391768432b
+      MODEL_FILE: ${{ matrix.file }}
+      MODEL_URL: ${{ matrix.url }}
+      MODEL_SHA256: ${{ matrix.sha256 }}
+      HF_HUB_DISABLE_TELEMETRY: "1"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Select a successful training run
+        id: training
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CONFIGURED_RUN: ${{ vars.CAREER_CHATBOT_TRAINING_RUN_ID }}
+        run: |
+          run="$CONFIGURED_RUN"
+          if [ -z "$run" ]; then
+            run=$(gh run list --branch chatbot-training --status success --limit 10 --json name,databaseId \
+              --jq '[.[] | select(.name == "Train chatbot pilots")][0].databaseId // empty')
+          fi
+          [[ "$run" =~ ^[0-9]+$ ]]
+          echo "id=$run" >> "$GITHUB_OUTPUT"
+      - uses: actions/download-artifact@v4
+        with:
+          name: chatbot-pilot-${{ matrix.name }}
+          path: .chat-package/training
+          github-token: ${{ github.token }}
+          run-id: ${{ steps.training.outputs.id }}
+      - name: Convert the trained adapter and verify the runtime files
+        run: |
+          mkdir -p .chat-package/runtime .chat-package/output
+          git clone --quiet --depth 1 --branch "$LLAMA_TAG" https://github.com/ggml-org/llama.cpp.git .chat-package/llama
+          test "$(git -C .chat-package/llama rev-parse HEAD)" = "$LLAMA_COMMIT"
+          python -m pip install --index-url https://download.pytorch.org/whl/cpu 'torch==2.7.1+cpu'
+          python -m pip install -r .chat-package/llama/requirements/requirements-convert_lora_to_gguf.txt
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          from huggingface_hub import hf_hub_download
+
+          adapter = Path(".chat-package/training/adapter")
+          training = json.loads((adapter / "evaluation.json").read_text())
+          hf_hub_download(
+              training["base_model"], "config.json", revision=training["base_revision"], local_dir=adapter,
+          )
+          PY
+          curl -fLsS --retry 2 --max-time 240 -o ".chat-package/$MODEL_FILE" "$MODEL_URL"
+          runtime_url="https://github.com/ggml-org/llama.cpp/releases/download/$LLAMA_TAG/llama-$LLAMA_TAG-bin-ubuntu-x64.tar.gz"
+          curl -fLsS --retry 2 --max-time 120 -o .chat-package/runtime.tar.gz "$runtime_url"
+          printf '%s  %s\n' "$MODEL_SHA256" ".chat-package/$MODEL_FILE" "$LLAMA_SHA256" .chat-package/runtime.tar.gz | sha256sum -c -
+          tar -xzf .chat-package/runtime.tar.gz -C .chat-package/runtime
+          python .chat-package/llama/convert_lora_to_gguf.py \
+            --base .chat-package/training/adapter --outtype f16 \
+            --outfile .chat-package/output/career-adapter.gguf .chat-package/training/adapter
+      - name: Compare the quantized base and trained adapter through the app wrapper
+        env:
+          PACKAGE_TRAINING_RUN: ${{ steps.training.outputs.id }}
+        run: |
+          cli=$(find .chat-package/runtime -type f -name llama-completion -print -quit)
+          test -x "$cli"
+          PYTHONPATH=backend python -B -m ml.evaluate_chatbot_package \
+            --model ".chat-package/$MODEL_FILE" --cli "$cli" \
+            --adapter .chat-package/output/career-adapter.gguf \
+            --training-report .chat-package/training/adapter/evaluation.json \
+            --out .chat-package/output
+      - uses: actions/upload-artifact@v4
+        with:
+          name: chatbot-package-${{ matrix.name }}
+          path: .chat-package/output
+          if-no-files-found: error
+          retention-days: 14

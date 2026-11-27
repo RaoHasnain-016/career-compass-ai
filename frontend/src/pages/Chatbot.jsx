@@ -16,7 +16,7 @@ import {
 import StudentLayout from "../layouts/StudentLayout";
 import StudentUpdateLink from "../components/StudentUpdateLink";
 import { formatUpdateDate } from "../components/NotificationItems";
-import { askChatbot, getChatHistory } from "../services/chatbotService";
+import { askChatbot, getChatState } from "../services/chatbotService";
 import "../styles/chatbot-page.css";
 
 const suggestedQuestions = [
@@ -233,6 +233,8 @@ export default function Chatbot() {
   ]);
   const [input, setInput] = useState("");
   const [loadingHistory, setLoadingHistory] = useState(true);
+  const [pilotAvailable, setPilotAvailable] = useState(false);
+  const [usePilot, setUsePilot] = useState(false);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
 
@@ -241,9 +243,10 @@ export default function Chatbot() {
 
     async function loadHistory() {
       try {
-        const history = await getChatHistory();
-        if (active && history.length) {
-          setMessages(historyToMessages(history));
+        const chat = await getChatState();
+        if (active) {
+          setPilotAvailable(chat.pilotAvailable);
+          if (chat.history.length) setMessages(historyToMessages(chat.history));
         }
       } catch (error) {
         console.error(error);
@@ -281,7 +284,7 @@ export default function Chatbot() {
     setError("");
 
     try {
-      const response = await askChatbot(trimmed, { careerId });
+      const response = await askChatbot(trimmed, { careerId, pilot: pilotAvailable && usePilot });
       setMessages((prev) => [
         ...prev,
         {
@@ -406,6 +409,7 @@ export default function Chatbot() {
                       <div className="chat-evidence">
                         <p className="chat-evidence-mode">{{
                           local_llm: "Local model",
+                          conversation_pilot: "Conversational pilot",
                           knowledge_fallback: "Saved guidance",
                           profile_guidance: "Career Compass guidance",
                           official_sources: "Official-source lookup",
@@ -461,11 +465,23 @@ export default function Chatbot() {
               sendMessage();
             }}
           >
+            {pilotAvailable && (
+              <label className="chat-pilot-option">
+                <input
+                  type="checkbox"
+                  checked={usePilot}
+                  disabled={sending}
+                  onChange={(event) => setUsePilot(event.target.checked)}
+                />
+                Try the conversational pilot
+              </label>
+            )}
             <textarea
               dir="auto"
               value={input}
               onChange={(event) => setInput(event.target.value)}
               placeholder="Ask about careers in your preferred language..."
+              maxLength={usePilot ? 1600 : undefined}
               rows={1}
               onKeyDown={(event) => {
                 if (

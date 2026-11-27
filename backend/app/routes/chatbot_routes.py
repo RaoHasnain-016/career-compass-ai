@@ -29,6 +29,7 @@ from app.services.career_ranker import rank_recommendations, ranker_configured
 from app.services.chatbot_knowledge_service import (
     empty_evidence, evidence_only_answer, knowledge_topic, retrieve_chat_evidence,
 )
+from app.services.local_chat_service import LocalChatError, ask_local_chatbot, local_chat_pilot_available
 from app.services.resource_service import find_missing_skills
 from app.services.student_updates_service import UpdateAudience, academic_fields, education_stage, load_audience
 from app.services.video_learning_service import recommend_video_courses
@@ -173,8 +174,10 @@ def ask_chatbot(
         .all()
     )
 
+    pilot_requested = request.mode == "pilot"
+    pilot_available = pilot_requested and local_chat_pilot_available()
     live_enabled = os.getenv("CHATBOT_LIVE_KNOWLEDGE", "").strip().lower() in {"true", "1"}
-    topic = knowledge_topic(request.message) if local_chat or live_enabled else None
+    topic = knowledge_topic(request.message) if local_chat or live_enabled or pilot_available else None
     audience = None
     if topic and live_enabled and profile is not None:
         audience = load_audience(db, user_id)
@@ -207,11 +210,16 @@ def ask_chatbot(
                 empty_evidence(topic, stage, "offline" if profile is not None else "profile_needed")
             )
             ai_response = ChatbotReply(evidence_only_answer(evidence), "official_sources")
+        elif pilot_requested:
+            if not pilot_available or len(request.message.strip()) > 1600:
+                raise LocalChatError("The conversation pilot is unavailable for this request.")
+            answer = ask_local_chatbot(request.message, context)
+            ai_response = ChatbotReply(answer, "conversation_pilot")
         else:
             ai_response = answer_from_saved_guidance(request.message, context)
             if ai_response is None:
                 ai_response = ask_career_chatbot(user_message=request.message.strip(), context=context)
-    except ChatbotServiceError:
+    except (ChatbotServiceError, LocalChatError):
         ai_response = answer_from_saved_guidance(request.message, context, fallback=True)
 
     chat_message = ChatMessage(
@@ -253,6 +261,7 @@ def get_chat_history(
     )
 
     return {
+        "pilot_available": local_chat_pilot_available(),
         "history": [
             {
                 "message_id": str(message.message_id),
