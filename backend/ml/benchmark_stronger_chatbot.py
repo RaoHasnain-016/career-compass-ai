@@ -97,7 +97,7 @@ def main():
 
     settings = LocalChatSettings(
         model_path=str(model), cli_path=str(args.cli.resolve(strict=True)),
-        context_tokens=2048, max_tokens=128, threads=2, timeout_seconds=60,
+        context_tokens=2048, max_tokens=168, threads=2, timeout_seconds=75, seed=41,
     )
     holdout = load_chat_dataset(DEFAULT_DATASET)["test"]
     checks = {case["id"]: case["review"] for case in PRESSURE_CASES}
@@ -127,6 +127,7 @@ def main():
         "settings": {
             "context_tokens": settings.context_tokens, "max_tokens": settings.max_tokens,
             "threads": settings.threads, "timeout_seconds": settings.timeout_seconds,
+            "seed": settings.seed,
         },
         "linux_peak_child_rss_kib": peak_child_rss_kib,
         "review_note": (

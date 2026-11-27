@@ -24,6 +24,7 @@ _ARABIC_SCRIPT = re.compile(r"[\u0621-\u064a\u066e-\u06d3\u06d5]")
 _ROMAN_URDU = re.compile(r"\b(mujhe|mujhay|konsi|kaise|chahiye|seekhni|karo|mera|meri|batao|karun|hain|parhai)\b", re.IGNORECASE)
 _REPEATED_PHRASE = re.compile(r"(?<!\w)(\w+(?:\s+\w+){0,7})(?:[\s,.;:،۔]+\1){2,}(?!\w)")
 _ENGLISH_REQUEST = re.compile(r"\b(?:in English|English please)\b|انگریزی میں", re.IGNORECASE)
+_URDU_SCRIPT_REQUEST = re.compile(r"\burdu (?:script|alphabet)\b|اردو رسم الخط", re.IGNORECASE)
 _SECTIONS = (
     ("live_evidence", 4), ("profile", 1), ("selected_career", 1),
     ("recommendations", 3), ("roadmap", 4), ("learning_resources", 4),
@@ -55,6 +56,7 @@ class LocalChatSettings:
     timeout_seconds: float = 40.0
     cli_path: str | None = None
     lora_path: str | None = None
+    seed: int | None = None
 
     @classmethod
     def from_environment(cls):
@@ -242,6 +244,11 @@ def _clean_answer(completion, evidence, question=""):
     if urdu_letters >= 4 and urdu_letters * 2 > question_letters and not _ENGLISH_REQUEST.search(question):
         if not _ARABIC_SCRIPT.search(answer):
             raise LocalChatError("The local model switched away from the requested script.")
+    if (
+        _ROMAN_URDU.search(question) and not urdu_letters
+        and _ARABIC_SCRIPT.search(answer) and not _URDU_SCRIPT_REQUEST.search(question)
+    ):
+        raise LocalChatError("The local model switched away from Roman Urdu.")
 
     allowed = {url for key in _TRUSTED_LINK_SECTIONS for url in _urls_in(evidence.get(key))}
     urls = {url.rstrip(".,;:!?") for url in _URL.findall(answer)}
@@ -254,10 +261,15 @@ def _ask_local_cli(settings, question, context):
     messages, evidence = _fit_context(None, settings, question, context)
     # Qwen3 and the small local test checkpoint use ChatML. Use a single raw
     # completion so the portable binary does not wait for interactive input.
+    model_name = Path(settings.model_path).name.casefold()
+    instruct_only = model_name.startswith(("qwen2.5-", "qwen3-4b-instruct-2507"))
+    if instruct_only:
+        messages = [{**message, "content": message["content"].removesuffix("/no_think").rstrip()}
+                    if message["role"] != "assistant" else message for message in messages]
     prompt = "".join(
         f"<|im_start|>{message['role']}\n{message['content']}<|im_end|>\n" for message in messages
     ) + "<|im_start|>assistant\n"
-    if Path(settings.model_path).name.casefold().startswith("qwen3"):
+    if model_name.startswith("qwen3") and not instruct_only:
         prompt += "<think>\n\n</think>\n\n"
     with TemporaryDirectory(prefix="career-chat-") as temp:
         prompt_path = Path(temp) / "prompt.txt"
@@ -269,6 +281,8 @@ def _ask_local_cli(settings, question, context):
         ]
         if settings.lora_path:
             arguments.extend(["--lora", settings.lora_path])
+        if settings.seed is not None:
+            arguments.extend(["--seed", str(settings.seed)])
         try:
             result = subprocess.run(
                 arguments, stdin=subprocess.DEVNULL, capture_output=True, encoding="utf-8", errors="replace",
@@ -279,6 +293,8 @@ def _ask_local_cli(settings, question, context):
             raise LocalChatError("The offline llama.cpp process did not complete.") from error
     if result.returncode:
         raise LocalChatError("The offline llama.cpp process failed.")
+    if not _STOP_SUFFIX.search(result.stdout):
+        raise LocalChatError("The local model did not finish its answer.")
     completion = {"choices": [{"message": {"content": result.stdout}}]}
     return _clean_answer(completion, evidence, question)
 

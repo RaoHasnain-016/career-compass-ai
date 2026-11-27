@@ -97,6 +97,7 @@ class LocalChatServiceTests(unittest.TestCase):
             ("What should I try?", "Start with Excel. Start with Excel. Start with Excel.", "repeated"),
             ("آج کون سا کام کروں؟", "میں دیکھوں گا گا گا۔", "repeated"),
             ("آج کون سا کام کروں؟", "Start with the first roadmap task.", "script"),
+            ("Mujhe kya shuru karna chahiye?", "پہلا سبق شروع کریں۔", "Roman Urdu"),
         ):
             with self.subTest(reason=reason, question=question):
                 self.runtime.create_chat_completion.return_value = completion(answer)
@@ -167,13 +168,30 @@ class LocalChatServiceTests(unittest.TestCase):
                 "LOCAL_CHAT_PILOT_ENABLED": "1", "LOCAL_CHAT_CLI_PATH": str(exe),
                 "LOCAL_CHAT_LORA_PATH": str(adapter),
             }), patch.object(local_chat_service.subprocess, "run", return_value=SimpleNamespace(
-                returncode=0, stdout="Compare the available school subjects.",
+                returncode=0, stdout="Compare the available school subjects. [end of text]",
             )) as run:
                 self.assertTrue(local_chat_service.local_chat_pilot_available())
                 local_chat_service.ask_local_chatbot("Which group should I choose?", "{}")
                 self.assertEqual(run.call_args.args[0][-2:], ["--lora", str(adapter.resolve())])
                 adapter.unlink()
                 self.assertFalse(local_chat_service.local_chat_pilot_available())
+
+    def test_cli_rejects_cutoff_and_uses_instruct_checkpoint_prompt(self):
+        with TemporaryDirectory() as directory:
+            model = Path(directory) / "Qwen3-4B-Instruct-2507-Q4_K_M.gguf"
+            cli = Path(directory) / "llama-completion.exe"
+            settings = local_chat_service.LocalChatSettings(str(model), cli_path=str(cli), seed=41)
+
+            def run(args, **kwargs):
+                prompt = Path(args[args.index("-f") + 1]).read_text(encoding="utf-8")
+                self.assertTrue(prompt.endswith("<|im_start|>assistant\n"))
+                self.assertNotIn("/no_think", prompt)
+                self.assertEqual(args[-2:], ["--seed", "41"])
+                return SimpleNamespace(returncode=0, stdout="Start by comparing the first")
+
+            with patch.object(local_chat_service.subprocess, "run", side_effect=run):
+                with self.assertRaisesRegex(local_chat_service.LocalChatError, "finish"):
+                    local_chat_service._ask_local_cli(settings, "What should I do?", {})
 
 
 class LocalChatProviderTests(unittest.TestCase):
