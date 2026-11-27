@@ -1,23 +1,31 @@
 """Student-update relevance and authenticated API checks with isolated test data."""
 
 from datetime import datetime, timezone
+import os
+from types import SimpleNamespace
 import unittest
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, Mock, patch
 from uuid import uuid4
 
+import firebase_admin
 from fastapi import FastAPI, Header
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
-from app.database import Base
-from app.models import StudentUpdate, StudentUpdateRead, User
-from app.routes import student_update_routes
-from app.services.student_updates_service import (
-    UpdateAudience, academic_fields, education_stage, news_matches, record_student_update,
-)
-from app.utils.auth_dependency import get_current_firebase_user
+with (
+    patch.dict(os.environ, {"DATABASE_URL": "sqlite+pysqlite:///:memory:"}),
+    patch("dotenv.load_dotenv"),
+    patch.dict(firebase_admin._apps, {"[DEFAULT]": object()}),
+):
+    from app.database import Base
+    from app.models import StudentUpdate, StudentUpdateRead, User
+    from app.routes import student_update_routes
+    from app.services.student_updates_service import (
+        UpdateAudience, academic_fields, education_stage, load_audience, news_matches, record_student_update,
+    )
+    from app.utils.auth_dependency import get_current_firebase_user
 
 
 class RelevanceTests(unittest.TestCase):
@@ -55,6 +63,44 @@ class RelevanceTests(unittest.TestCase):
         self.assertTrue(news_matches(article, UpdateAudience("undergraduate", "Pakistan")))
         self.assertFalse(news_matches(article, UpdateAudience("diploma", "Pakistan", ("technology",))))
         self.assertFalse(news_matches(article, UpdateAudience("undergraduate", "Canada", ("technology",))))
+        self.assertFalse(news_matches({**article, "country": None}, UpdateAudience("undergraduate", "Pakistan", ("technology",))))
+
+    def test_active_career_excludes_saved_and_recommended_fields(self):
+        db = Mock()
+        db.scalar.return_value = SimpleNamespace(
+            selected_career_id=uuid4(), academic_level="Diploma / DAE", country="Pakistan",
+            study_preference="Career direction: Business | Education stream: Commerce",
+        )
+        db.execute.return_value.one_or_none.return_value = ("Cybersecurity Analyst", "Technology")
+
+        audience = load_audience(db, uuid4())
+
+        self.assertEqual(audience, UpdateAudience("diploma", "Pakistan", ("technology",), "Cybersecurity Analyst"))
+        db.scalars.assert_not_called()
+
+    def test_inactive_selection_restores_profile_and_saved_career_fallback(self):
+        db = Mock()
+        db.scalar.return_value = SimpleNamespace(
+            selected_career_id=uuid4(), academic_level="Bachelor", country=None,
+            study_preference="Country: Pakistan | Career direction: Law",
+        )
+        db.execute.return_value.one_or_none.return_value = None
+        db.scalars.side_effect = [["Technology"], ["Business"]]
+
+        self.assertEqual(
+            load_audience(db, uuid4()),
+            UpdateAudience("undergraduate", "Pakistan", ("law", "technology", "business")),
+        )
+
+    def test_occupation_specific_news_distinguishes_careers_within_one_field(self):
+        article = {"fields": ["technology"], "country": "Pakistan", "stages": []}
+        audience = UpdateAudience("diploma", "Pakistan", ("technology",), "Cybersecurity Analyst")
+
+        self.assertTrue(news_matches({**article, "occupations": ["cybersecurity"]}, audience))
+        self.assertTrue(news_matches(article, audience))
+        self.assertFalse(news_matches({**article, "occupations": ["software"]}, audience))
+        self.assertFalse(news_matches({**article, "occupations": ["cybersecurity"], "stages": ["postgraduate"]}, audience))
+        self.assertFalse(news_matches({**article, "occupations": ["cybersecurity"], "stages": ["diploma"], "country": "UK"}, audience))
 
 
 class InboxApiTests(unittest.TestCase):
@@ -103,6 +149,30 @@ class InboxApiTests(unittest.TestCase):
             self.assertEqual(response.json(), {"unread_count": a["unread_count"] - 1, "read_ids": [a_id]})
         self.assertEqual(self.inbox("b")["unread_count"], b["unread_count"])
         self.assertTrue(next(item for item in self.inbox("a")["items"] if item["id"] == a_id)["read"])
+
+    def test_inbox_selects_news_for_the_active_career_and_excludes_advanced_offers(self):
+        audience = UpdateAudience("diploma", "Pakistan", ("technology",), "Cybersecurity Analyst")
+        article = {
+            "id": "security", "title": "Career news for cybersecurity analysts", "summary": "",
+            "url": "https://www.onetcenter.org/whatsnew.html#technology",
+            "source": "O*NET Resource Center", "published_at": datetime.now(timezone.utc).isoformat(),
+            "country": "United States", "fields": ["technology"], "stages": [],
+            "occupations": ["cybersecurity"],
+        }
+        articles = [
+            article,
+            {**article, "id": "software", "occupations": ["software"]},
+            {**article, "id": "master", "country": "Pakistan", "stages": ["postgraduate"]},
+        ]
+        with (
+            patch.object(student_update_routes, "get_audience", return_value=audience),
+            patch.object(student_update_routes, "get_career_news", new_callable=AsyncMock,
+                         return_value={"items": articles, "status": "live", "checked_at": None}),
+        ):
+            response = self.inbox("a")
+
+        self.assertEqual(response["career_focus"], "Cybersecurity Analyst")
+        self.assertEqual([item["id"] for item in response["items"] if item["id"].startswith("news:")], ["news:security"])
 
     def test_student_only_and_study_options_use_the_signed_in_profile(self):
         self.assertEqual(self.client.get("/student-updates/universities", headers={"Authorization": "staff"}).status_code, 403)

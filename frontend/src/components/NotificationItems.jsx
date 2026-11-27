@@ -27,7 +27,7 @@ export function NotificationStatus({ data, loading, error }) {
   if (error) return <p className="student-updates-status warning" role="alert">{error}</p>;
   if (loading && !data) return <p className="student-updates-status" role="status">Loading notifications…</p>;
   if (data?.feed_status === "stale") {
-    return <p className="student-updates-status warning">Showing previously fetched news. Live sources are temporarily unavailable.</p>;
+    return <p className="student-updates-status warning">Some sources could not be reached. Recent updates from those sources may be cached.</p>;
   }
   if (data?.feed_status === "unavailable") {
     return <p className="student-updates-status warning">Live career news is temporarily unavailable.</p>;
@@ -38,6 +38,9 @@ export function NotificationStatus({ data, loading, error }) {
         <Link className="student-update-link" to="/profile-setup">Complete your profile</Link> to see career news that matches your education stage and interests.
       </p>
     );
+  }
+  if (data?.feed_status === "live" && data.feed_sources?.some((source) => source.status === "unavailable")) {
+    return <p className="student-updates-status warning">Some official sources are temporarily unavailable.</p>;
   }
   return null;
 }

@@ -1,8 +1,10 @@
 import os
+from types import SimpleNamespace
 from uuid import UUID
 
 from anyio import from_thread
 from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -12,7 +14,6 @@ from app.models.career_model import Career
 from app.models.recommendation_model import Recommendation
 from app.models.roadmap_model import RoadmapStage
 from app.models.resource_model import LearningResource
-from app.models.video_resource_model import VideoResource
 from app.models.saved_career_model import SavedCareer
 from app.models.chat_model import ChatMessage
 from app.schemas.chatbot_schema import ChatbotRequest
@@ -20,6 +21,7 @@ from app.services.chatbot_service import (
     CHATBOT_PROVIDER,
     ChatbotReply,
     ChatbotServiceError,
+    answer_from_saved_guidance,
     build_chatbot_context,
     ask_career_chatbot,
 )
@@ -29,6 +31,7 @@ from app.services.chatbot_knowledge_service import (
 )
 from app.services.resource_service import find_missing_skills
 from app.services.student_updates_service import UpdateAudience, academic_fields, education_stage, load_audience
+from app.services.video_learning_service import recommend_video_courses
 from app.utils.auth_dependency import get_current_firebase_user
 
 router = APIRouter(
@@ -99,7 +102,7 @@ def ask_chatbot(
                 detail="Invalid career_id format."
             )
 
-    elif local_chat and profile is not None:
+    elif profile is not None:
         career_uuid = profile.selected_career_id
         if career_uuid is None and recommendations:
             career_uuid = recommendations[0].career_id
@@ -136,36 +139,25 @@ def ask_chatbot(
                 required_skills=selected_career.required_skills
             )
 
-        all_resources = (
+        resource_query = (
             db.query(LearningResource)
             .filter(
                 LearningResource.status == True,
                 LearningResource.is_free == True
             )
-            .limit(15)
-            .all()
         )
 
         if missing_skills:
-            lower_missing = [skill.lower() for skill in missing_skills]
-
-            learning_resources = [
-                resource
-                for resource in all_resources
-                if resource.skill and resource.skill.lower() in lower_missing
-            ][:5]
+            resource_query = resource_query.filter(func.lower(LearningResource.skill).in_(missing_skills))
         else:
-            learning_resources = all_resources[:5]
+            resource_query = resource_query.filter(LearningResource.career_field == selected_career.field)
+        learning_resources = resource_query.order_by(LearningResource.title).limit(5).all()
 
-        video_courses = (
-            db.query(VideoResource)
-            .filter(
-                VideoResource.career_field == selected_career.field,
-                VideoResource.status == True
-            )
-            .limit(5)
-            .all()
+        videos = recommend_video_courses(
+            db, selected_career.title, selected_career.field,
+            selected_career.required_skills or [], missing_skills, live=False,
         )
+        video_courses = [SimpleNamespace(**video) for video in videos[:3]]
 
     saved_careers = (
         db.query(SavedCareer)
@@ -181,19 +173,16 @@ def ask_chatbot(
         .all()
     )
 
-    evidence = None
     live_enabled = os.getenv("CHATBOT_LIVE_KNOWLEDGE", "").strip().lower() in {"true", "1"}
     topic = knowledge_topic(request.message) if local_chat or live_enabled else None
-    if topic:
-        if live_enabled and profile is not None:
-            audience = load_audience(db, user_id)
-            if selected_career:
-                fields = tuple(dict.fromkeys([*academic_fields(selected_career.field), *audience.fields]))[:3]
-                audience = UpdateAudience(audience.stage, audience.country, fields)
-            evidence = from_thread.run(retrieve_chat_evidence, topic, audience)
-        else:
-            stage = education_stage(profile.academic_level) if profile is not None else "exploring"
-            evidence = empty_evidence(topic, stage, "offline" if profile is not None else "profile_needed")
+    audience = None
+    if topic and live_enabled and profile is not None:
+        audience = load_audience(db, user_id)
+        if request.career_id and selected_career:
+            audience = UpdateAudience(
+                audience.stage, audience.country, tuple(academic_fields(selected_career.field)), selected_career.title,
+            )
+    stage = education_stage(profile.academic_level) if profile is not None else "exploring"
 
     context = build_chatbot_context(
         user=user,
@@ -205,18 +194,23 @@ def ask_chatbot(
         video_courses=video_courses,
         saved_careers=saved_careers,
         chat_history=list(reversed(chat_history)),
-        live_evidence=evidence,
     )
 
-    if local_chat:
-        # Native inference can take seconds. Return the read connection to the pool.
-        db.rollback()
+    # Return the read connection before any publisher or model request.
+    db.rollback()
 
+    evidence = None
     try:
-        if evidence:
+        if topic:
+            evidence = (
+                from_thread.run(retrieve_chat_evidence, topic, audience) if audience else
+                empty_evidence(topic, stage, "offline" if profile is not None else "profile_needed")
+            )
             ai_response = ChatbotReply(evidence_only_answer(evidence), "official_sources")
         else:
-            ai_response = ask_career_chatbot(user_message=request.message.strip(), context=context)
+            ai_response = answer_from_saved_guidance(request.message, context)
+            if ai_response is None:
+                ai_response = ask_career_chatbot(user_message=request.message.strip(), context=context)
     except ChatbotServiceError as error:
         raise HTTPException(
             status_code=error.status_code,

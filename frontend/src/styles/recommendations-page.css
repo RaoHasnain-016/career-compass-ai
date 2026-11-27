@@ -288,6 +288,12 @@
   animation: recSpin 0.8s linear infinite;
 }
 
+.rec-ranking-hint {
+  margin: 0 0 18px;
+  color: #475569;
+  line-height: 1.5;
+}
+
 .rec-error {
   margin-bottom: 22px;
   border-radius: 16px;

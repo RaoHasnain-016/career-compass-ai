@@ -55,7 +55,7 @@ async def fetch_updates(user_id):
 
 
 async def feed_for_audience(audience):
-    if audience.stage == "exploring" or not (audience.fields or audience.country):
+    if audience.stage == "exploring" or not (audience.fields or audience.country or audience.career):
         return {"items": [], "checked_at": None, "status": "profile_needed", "sources": []}
     return await get_career_news()
 
@@ -72,6 +72,7 @@ async def notifications(response: Response, user_id: UUID = Depends(current_stud
         "feed_status": feed["status"],
         "feed_sources": feed.get("sources", []),
         "stage": audience.stage,
+        "career_focus": audience.career or None,
     }
 
 

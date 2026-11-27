@@ -2,11 +2,12 @@ import re
 from dataclasses import dataclass
 from datetime import datetime, timezone
 
-from sqlalchemy import func, select
+from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert as postgres_insert
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 
 from app.models import Career, Recommendation, SavedCareer, StudentProfile, StudentUpdate, StudentUpdateRead
+from app.services.career_news_service import occupation_topics
 from app.services.education_stage_service import education_stage
 
 
@@ -60,6 +61,7 @@ class UpdateAudience:
     stage: str = "exploring"
     country: str = ""
     fields: tuple[str, ...] = ()
+    career: str = ""
 
 
 def academic_fields(value):
@@ -89,13 +91,19 @@ def load_audience(db, user_id):
         return UpdateAudience()
 
     preferences = _preferences(profile.study_preference)
-    fields = []
+    stage = education_stage(profile.academic_level)
+    country = profile.country or preferences.get("country", "")
     if profile.selected_career_id:
-        selection = db.scalar(select(Career.field).where(
+        selection = db.execute(select(Career.title, Career.field).where(
             Career.career_id == profile.selected_career_id, Career.status.is_(True)
-        ))
-        fields.extend(academic_fields(selection))
-    fields.extend(academic_fields(preferences.get("career direction")))
+        )).one_or_none()
+        if selection:
+            title, field = selection
+            fields = academic_fields(field) or academic_fields(title)
+            if fields or occupation_topics(title):
+                return UpdateAudience(stage, country, tuple(fields), title)
+
+    fields = academic_fields(preferences.get("career direction"))
     if not fields:
         fields.extend(academic_fields(preferences.get("education stream")))
     saved = db.scalars(select(Career.field).join(SavedCareer).where(
@@ -112,8 +120,8 @@ def load_audience(db, user_id):
         fields.extend(academic_fields(match))
 
     return UpdateAudience(
-        stage=education_stage(profile.academic_level),
-        country=profile.country or preferences.get("country", ""),
+        stage=stage,
+        country=country,
         fields=tuple(dict.fromkeys(fields))[:3],
     )
 
@@ -129,11 +137,18 @@ def news_matches(item, audience):
     fields, stages = set(item.get("fields") or []), set(item.get("stages") or [])
     if stages and audience.stage not in stages:
         return False
-    if fields and not fields.intersection(audience.fields):
+    item_occupations = set(item.get("occupations") or [])
+    selected_occupations = set(occupation_topics(audience.career))
+    occupation_match = bool(item_occupations.intersection(selected_occupations))
+    if item_occupations and selected_occupations and not occupation_match:
         return False
-    if not fields and not stages:
+    if fields and not fields.intersection(audience.fields) and not occupation_match:
+        return False
+    if not fields and not stages and not occupation_match:
         return False
     source_country = _country(item.get("country"))
+    if stages and not source_country:
+        return False
     # Programme/qualification news only applies to the relevant education system.
     if source_country and source_country != _country(audience.country):
         return bool(not stages and item.get("source", "").startswith("O*NET"))

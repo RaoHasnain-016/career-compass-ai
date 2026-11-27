@@ -1,7 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { getStudentNotifications, markStudentNotificationsRead } from "../services/studentUpdatesService";
+import {
+  getStudentNotifications,
+  markStudentNotificationsRead,
+  STUDENT_NOTIFICATIONS_CHANGED,
+} from "../services/studentUpdatesService";
 
 const REFRESH_INTERVAL = 5 * 60 * 1000;
+const BELL_REFRESH_INTERVAL = 30 * 1000;
 
 export default function useStudentNotifications() {
   const [data, setData] = useState(null);
@@ -11,12 +16,16 @@ export default function useStudentNotifications() {
   const [readError, setReadError] = useState("");
   const active = useRef(false);
   const loadingRequest = useRef(null);
+  const refreshQueued = useRef(false);
   const readingRequest = useRef(false);
   const readIds = useRef(new Set());
   const lastCheck = useRef(0);
 
-  const refresh = useCallback(async () => {
-    if (loadingRequest.current) return;
+  const refresh = useCallback(async function requestNotifications({ queue = false } = {}) {
+    if (loadingRequest.current) {
+      if (queue) refreshQueued.current = true;
+      return;
+    }
     lastCheck.current = Date.now();
     const request = getStudentNotifications();
     loadingRequest.current = request;
@@ -24,7 +33,7 @@ export default function useStudentNotifications() {
     setError("");
     try {
       const response = await request;
-      if (!active.current || loadingRequest.current !== request) return;
+      if (!active.current || loadingRequest.current !== request || refreshQueued.current) return;
       if (!Array.isArray(response?.items)) throw new Error("Invalid notification response.");
 
       let changes = 0;
@@ -38,16 +47,25 @@ export default function useStudentNotifications() {
         : items.filter((item) => !item.read).length;
       setData({ ...response, items, unread_count: unreadCount });
     } catch {
-      if (active.current && loadingRequest.current === request) {
+      if (active.current && loadingRequest.current === request && !refreshQueued.current) {
         setError("Notifications could not be refreshed. Please try again.");
       }
     } finally {
       if (active.current && loadingRequest.current === request) {
         loadingRequest.current = null;
-        setLoading(false);
+        if (refreshQueued.current) {
+          refreshQueued.current = false;
+          void requestNotifications();
+        } else {
+          setLoading(false);
+        }
       }
     }
   }, []);
+
+  const refreshOnOpen = useCallback(() => {
+    if (Date.now() - lastCheck.current >= BELL_REFRESH_INTERVAL) void refresh();
+  }, [refresh]);
 
   useEffect(() => {
     active.current = true;
@@ -58,12 +76,16 @@ export default function useStudentNotifications() {
       }
     };
     const timer = window.setInterval(refreshWhenVisible, REFRESH_INTERVAL);
+    const refreshAfterProfileChange = () => { void refresh({ queue: true }); };
     document.addEventListener("visibilitychange", refreshWhenVisible);
+    window.addEventListener(STUDENT_NOTIFICATIONS_CHANGED, refreshAfterProfileChange);
     return () => {
       active.current = false;
       loadingRequest.current = null;
+      refreshQueued.current = false;
       window.clearInterval(timer);
       document.removeEventListener("visibilitychange", refreshWhenVisible);
+      window.removeEventListener(STUDENT_NOTIFICATIONS_CHANGED, refreshAfterProfileChange);
     };
   }, [refresh]);
 
@@ -75,16 +97,14 @@ export default function useStudentNotifications() {
     try {
       const result = await markStudentNotificationsRead(ids);
       if (!active.current) return;
-      const confirmed = Array.isArray(result?.read_ids) ? result.read_ids : ids;
+      if (!Array.isArray(result?.read_ids)) throw new Error("Invalid read confirmation.");
+      const confirmed = result.read_ids;
       for (const id of confirmed) readIds.current.add(id);
       setData((current) => {
         if (!current) return current;
         const changed = new Set(confirmed);
         const items = current.items.map((item) => changed.has(item.id) ? { ...item, read: true } : item);
-        const unreadCount = Number.isInteger(result?.unread_count)
-          ? result.unread_count
-          : items.filter((item) => !item.read).length;
-        return { ...current, items, unread_count: unreadCount };
+        return { ...current, items, unread_count: items.filter((item) => !item.read).length };
       });
     } catch {
       if (active.current) setReadError("Read status could not be saved. Please try again.");
@@ -94,5 +114,5 @@ export default function useStudentNotifications() {
     }
   }
 
-  return { data, loading, error, refresh, reading, readError, markRead };
+  return { data, loading, error, refresh, refreshOnOpen, reading, readError, markRead };
 }

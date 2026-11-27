@@ -1,4 +1,5 @@
 import { get, post, put } from "./api";
+import { notifyStudentNotificationsChanged } from "./studentUpdatesService";
 
 export function normalizeProfileResponse(response) {
   return response?.profile || response || null;
@@ -11,11 +12,13 @@ export async function getStudentProfile() {
 
 export async function createStudentProfile(profilePayload) {
   const response = await post("/student/profile", profilePayload);
+  notifyStudentNotificationsChanged();
   return normalizeProfileResponse(response);
 }
 
 export async function updateStudentProfile(profilePayload) {
   const response = await put("/student/profile", profilePayload);
+  notifyStudentNotificationsChanged();
   return normalizeProfileResponse(response);
 }
 

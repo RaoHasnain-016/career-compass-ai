@@ -56,6 +56,8 @@ $env:CHATBOT_LIVE_KNOWLEDGE = "1"
 
 The backend runs the local model without OpenRouter. Its answer modes distinguish local LLM generation, an official-source lookup, and saved guidance when inference is unavailable. With `CHATBOT_LIVE_KNOWLEDGE=1`, admissions, university and news questions use the existing country- and stage-filtered feeds or official guides, regardless of the configured language provider. The reply links to its sources and carries the last checked time. Fetches are cached and coverage depends on publisher availability. Set `CHATBOT_LIVE_KNOWLEDGE=0` to disable those chat lookups. Local inference can still use the student's saved career and roadmap context. Firebase and other online site features have separate network dependencies.
 
+The chat's suggested career, skill-gap, roadmap, resource and video questions use Career Compass records directly. Those replies carry the **Career Compass guidance** label and require no model API call. The student can use the same selected career across the roadmap, learning resources and career news.
+
 ## 5. Improve the models with reviewed evidence
 
 Keep verified source updates separate from training. Add corrections and adviser-reviewed relevance labels to a new dataset version, retrain offline, compare on held-out profiles, and version the model artifact. The model does not treat student messages as training data or update its weights automatically. A future LoRA adapter can improve language or response style after you curate and evaluate a separate career Q&A dataset.

@@ -21,6 +21,8 @@ from app.services.recommendation_service import (
 logger = logging.getLogger(__name__)
 MODEL_FORMAT = "career-compass-lightgbm-v1"
 LINEAR_MODEL_FORMAT = "career-compass-linear-v1"
+ACTIONABLE_ELIGIBILITY = {"eligible", "near_eligible"}
+PREFERENCE_BOOSTS = {"saved_career": 8, "saved_field": 4}
 _load_lock = Lock()
 FEATURE_NAMES = (
     "interest_overlap", "skill_overlap", "subject_overlap",
@@ -57,8 +59,31 @@ def career_rank_features(profile, career):
 
 def ranking_policy_key(eligibility, learned_score, baseline_score, title):
     """Rank actionable candidates before aspirational or unqualified ones."""
-    later_path = eligibility not in {"eligible", "near_eligible"}
+    later_path = eligibility not in ACTIONABLE_ELIGIBILITY
     return later_path, -learned_score, -baseline_score, title.casefold()
+
+
+def personalize_recommendations(recommendations, saved_careers):
+    """Apply the student's current bookmarks to order without changing match scores."""
+    saved_ids = {career_id for career_id, _ in saved_careers}
+    saved_fields = {field.strip().casefold() for _, field in saved_careers if field and field.strip()}
+    reasons = {}
+    for item in recommendations:
+        if item.eligibility_status not in ACTIONABLE_ELIGIBILITY or not item.career.status:
+            continue
+        if item.career_id in saved_ids:
+            reasons[item.career_id] = "saved_career"
+        elif (item.career.field or "").strip().casefold() in saved_fields:
+            reasons[item.career_id] = "saved_field"
+
+    if not reasons:
+        return recommendations, reasons
+
+    ordered = sorted(recommendations, key=lambda item: (
+        item.eligibility_status not in ACTIONABLE_ELIGIBILITY,
+        -float(item.match_score) - PREFERENCE_BOOSTS.get(reasons.get(item.career_id), 0),
+    ))
+    return ordered, reasons
 
 
 def ranker_configured():

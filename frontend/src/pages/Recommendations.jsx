@@ -45,6 +45,7 @@ import {
   getSavedCareers,
   saveCareer,
 } from "../services/recommendationService";
+import { removeSavedCareer } from "../services/savedCareerService";
 import { getStudentProfile, selectCareer } from "../services/profileService";
 import { downloadCareerReport } from "../services/reportService";
 import "../styles/recommendations-page.css";
@@ -60,6 +61,12 @@ const filterOptions = [
   "Data",
   "High Match",
 ];
+
+const rankingModes = { model: "model", personalized: "personalized" };
+const personalizationLabels = {
+  saved_career: "Based on your saved career",
+  saved_field: "Related to a career you saved",
+};
 
 const navLinks = [
   { label: "Dashboard", path: "/dashboard", icon: <FaHome /> },
@@ -154,7 +161,7 @@ function Recommendations() {
       setError("");
 
       const [recommendationData, savedData, profileData] = await Promise.all([
-        getMyRecommendationRanking(),
+        getMyRecommendationRanking(sortBy === "personalized" ? "personalized" : "rules"),
         getSavedCareers(),
         getStudentProfile().catch(() => null),
       ]);
@@ -169,7 +176,7 @@ function Recommendations() {
 
       setSavedCareerIds(ids);
       setProfile(profileData);
-      setSelectedCareerId(profileData?.selected_career_id || recommendationData.recommendations[0]?.career_id || "");
+      setSelectedCareerId(profileData?.selected_career_id || "");
     } catch (error) {
       console.error(error);
       setError(
@@ -187,9 +194,9 @@ function Recommendations() {
 
   async function handleSortChange(event) {
     const nextSort = event.target.value;
-    const useModel = nextSort === "model";
+    const ranking = rankingModes[nextSort] || "rules";
 
-    if (useModel === (sortBy === "model")) {
+    if (ranking === (rankingModes[sortBy] || "rules")) {
       setSortBy(nextSort);
       return;
     }
@@ -197,10 +204,10 @@ function Recommendations() {
     setChangingRanking(true);
     setError("");
     try {
-      const result = await getMyRecommendationRanking(useModel);
+      const result = await getMyRecommendationRanking(ranking);
       setModelRankingAvailable(result.modelRankingAvailable);
 
-      if (useModel && result.rankingSource !== "trained") {
+      if (ranking === "model" && result.rankingSource !== "trained") {
         setError("The trained ranking is unavailable for these recommendations. The standard ranking is still available.");
         return;
       }
@@ -322,19 +329,30 @@ function Recommendations() {
     }
   };
 
-  const handleSaveCareer = async (careerId) => {
+  const handleBookmark = async (careerId, isSaved) => {
     if (!careerId) return;
 
+    setSavingId(careerId);
+    setError("");
     try {
-      setSavingId(careerId);
-      await saveCareer(careerId);
-
-      setSavedCareerIds((prev) =>
-        prev.includes(careerId) ? prev : [...prev, careerId]
-      );
+      if (isSaved) {
+        await removeSavedCareer(careerId);
+        setSavedCareerIds((ids) => ids.filter((id) => id !== careerId));
+      } else {
+        await saveCareer(careerId);
+        setSavedCareerIds((ids) => [...ids, careerId]);
+      }
+      if (sortBy === "personalized") {
+        try {
+          const result = await getMyRecommendationRanking("personalized");
+          setRecommendations(result.recommendations);
+        } catch {
+          setError("Bookmark updated. Reload this page to refresh your personalized ranking.");
+        }
+      }
     } catch (error) {
       console.error(error);
-      setError(error.message || "Career could not be saved.");
+      setError(error.message || "The bookmark could not be updated.");
     } finally {
       setSavingId("");
     }
@@ -427,9 +445,10 @@ function Recommendations() {
                 aria-busy={changingRanking}
                 value={sortBy}
                 onChange={handleSortChange}
-                disabled={changingRanking || generating}
+                disabled={changingRanking || generating || !!savingId}
               >
                 <option value="recommended">Recommended Order</option>
+                <option value="personalized">Personalized Order</option>
                 {modelRankingAvailable && recommendations.length > 1 && (
                   <option value="model">Preview Trained Ranking</option>
                 )}
@@ -447,7 +466,7 @@ function Recommendations() {
                 type="button"
                 className="regenerate-btn"
                 onClick={handleGenerate}
-                disabled={generating || changingRanking}
+                disabled={generating || changingRanking || !!savingId}
               >
                 <FaSyncAlt className={generating ? "spin-icon" : ""} />
                 {generating ? "Generating..." : "Generate More Careers"}
@@ -459,6 +478,13 @@ function Recommendations() {
           </div>
 
           {error && <div className="rec-error" role="alert">{error}</div>}
+
+          {sortBy === "personalized" && recommendations.length > 0 && (
+            <p className="rec-ranking-hint">
+              Save or remove careers to adjust the order of options you can pursue.
+              Match scores still come from your profile.
+            </p>
+          )}
 
           {recommendations.length === 0 ? (
             <div className="rec-empty-state">
@@ -486,7 +512,7 @@ function Recommendations() {
                   <div className="rec-hero-info">
                     <span>
                       <FaMagic />
-                      {sortBy === "model" ? "Trained Ranking Preview" : "Profile-Based Matches"}
+                      {sortBy === "model" ? "Trained Ranking Preview" : sortBy === "personalized" ? "Based on Your Saved Careers" : "Profile-Based Matches"}
                     </span>
 
                     <h2>Your Best Career Matches</h2>
@@ -501,7 +527,7 @@ function Recommendations() {
                         <strong>{analytics.highestScore}%</strong>
                       </div>
                       <div>
-                        <small>Strongest Field</small>
+                        <small>First Suggested Field</small>
                         <strong>{analytics.strongestField}</strong>
                       </div>
                     </div>
@@ -586,7 +612,7 @@ function Recommendations() {
                               <div className="rec-title-row">
                                 <h2>{title}</h2>
                                 <span className={`match-badge ${getBadgeClass(score)}`}>
-                                  {item.model_rank ? `Rank #${item.model_rank}` : getBadge(index, score)}
+                                  {item.model_rank ? `Rank #${item.model_rank}` : getBadge(sortBy === "personalized" ? -1 : index, score)}
                                 </span>
                               </div>
 
@@ -600,7 +626,7 @@ function Recommendations() {
 
                           <div className="rec-score">
                             <strong>{score}%</strong>
-                            <span>{item.model_rank ? "Rule Match Score" : "Match Score"}</span>
+                            <span>{item.model_rank || sortBy === "personalized" ? "Rule Match Score" : "Match Score"}</span>
                           </div>
                         </div>
 
@@ -609,6 +635,7 @@ function Recommendations() {
                           <span>{item.confidence_level || "High Confidence"}</span>
                           <span>{item.eligibility_status || "Eligible"}</span>
                           <span>{item.difficulty_level || "Medium Difficulty"}</span>
+                          {item.personalization_reason && <span>{personalizationLabels[item.personalization_reason]}</span>}
                         </div>
 
                         <div className="rec-skills-grid">
@@ -676,7 +703,7 @@ function Recommendations() {
                               type="button"
                               className={isSelected ? "selected-career-btn" : "choose-career-btn"}
                               onClick={() => handleChooseCareer(careerId)}
-                              disabled={savingId === careerId || isSelected}
+                              disabled={!!savingId || changingRanking || generating || isSelected}
                             >
                               {isSelected ? "Selected Career" : "Choose Career"}
                             </button>
@@ -686,9 +713,10 @@ function Recommendations() {
                             <button
                               type="button"
                               className={isSaved ? "saved" : ""}
-                              onClick={() => handleSaveCareer(careerId)}
-                              disabled={savingId === careerId || isSaved}
-                              title="Save Career"
+                              onClick={() => handleBookmark(careerId, isSaved)}
+                              disabled={!!savingId || changingRanking || generating}
+                              aria-label={isSaved ? `Remove ${title} from saved careers` : `Save ${title}`}
+                              title={isSaved ? "Remove Saved Career" : "Save Career"}
                             >
                               {isSaved ? <FaBookmark /> : <FaRegBookmark />}
                             </button>
@@ -785,7 +813,7 @@ function Recommendations() {
                   </h3>
 
                   <p>
-                    Based on your highest match, focus on{" "}
+                    For your first recommendation, focus on{" "}
                     <strong>
                       {asArray(analytics.topCareer?.missing_skills)[0] ||
                         "your missing skill gaps"}

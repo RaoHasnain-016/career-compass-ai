@@ -24,8 +24,8 @@ _MAX_FEED_ENTRIES = 1500
 _MAX_FEED_ITEMS = 36
 _LOOKBACK = timedelta(days=60)
 _MAX_STALE = timedelta(hours=24)
-_REFRESH_SECONDS = 30 * 60
-_RETRY_SECONDS = 5 * 60
+_REFRESH_SECONDS = 5 * 60
+_RETRY_SECONDS = 2 * 60
 _ATOM = "{http://www.w3.org/2005/Atom}"
 _VOCATIONAL_STAGES = ("senior_secondary", "diploma")
 
@@ -84,6 +84,31 @@ _FIELDS = {
 _FIELD_PATTERNS = {
     name: re.compile(rf"\b(?:{terms})\b", re.IGNORECASE) for name, terms in _FIELDS.items()
 }
+# Specific occupation headlines can narrow a department match. General field
+# updates keep an empty list so they still reach students following that field.
+_OCCUPATIONS = {
+    "software": r"software engineer(?:s|ing)?|software developers?|web developers?|programmers?",
+    "cybersecurity": r"cyber[ -]?security|information security analysts?",
+    "it_support": r"IT support|computer support specialists?|help desk technicians?",
+    "data": r"data analysts?|data scientists?|statisticians?",
+    "civil_engineering": r"civil engineer(?:s|ing)?",
+    "electrical_engineering": r"electrical engineer(?:s|ing)?|electrical technicians?",
+    "medicine": r"doctors?|physicians?|medical practitioners?",
+    "nursing": r"nurses?|nursing",
+    "pharmacy": r"pharmacists?|pharmacy technicians?",
+    "lab_technology": r"(?:medical |clinical )?lab(?:oratory)? technicians?",
+    "accounting": r"accountants?|accounting technicians?|bookkeepers?",
+    "psychology": r"psychologists?",
+    "teaching": r"teachers?|teaching assistants?|tutors?",
+    "law": r"lawyers?|solicitors?|barristers?|paralegals?",
+    "architecture": r"architects?|architectural technologists?",
+    "graphic_design": r"graphic designers?",
+    "journalism": r"journalists?|reporters?",
+    "environmental_science": r"environmental scientists?",
+}
+_OCCUPATION_PATTERNS = {
+    name: re.compile(rf"\b(?:{terms})\b", re.IGNORECASE) for name, terms in _OCCUPATIONS.items()
+}
 _CAREER = re.compile(
     r"\b(?:career(?:s| pathways)?|occupations?|occupational|workforce|employment|labou?r market|"
     r"job ads?|job growth|job openings|hiring|skills needs|skills shortages|staff shortages|"
@@ -137,14 +162,17 @@ class _PlainTextParser(HTMLParser):
             self.text.append(data)
 
 
-def _plain_text(value, limit):
+def _plain_text(value):
     parser = _PlainTextParser()
     parser.feed((value or "")[:8000])
     parser.close()
-    text = " ".join(" ".join(parser.text).split())
-    if len(text) <= limit:
-        return text
-    return text[:limit].rsplit(" ", 1)[0].rstrip() + "…"
+    return " ".join(" ".join(parser.text).split())
+
+
+def _shorten(value, limit):
+    if len(value) <= limit:
+        return value
+    return value[:limit].rsplit(" ", 1)[0].rstrip() + "…"
 
 
 def _article_url(raw, source):
@@ -195,6 +223,11 @@ def _fields(title, summary):
     if not fields:
         fields = [name for name, terms in _FIELD_PATTERNS.items() if terms.search(summary)]
     return fields
+
+
+def occupation_topics(title):
+    """Find positively named occupations without treating a whole field as a role."""
+    return [name for name, pattern in _OCCUPATION_PATTERNS.items() if pattern.search(title or "")]
 
 
 def _classify(title, summary):
@@ -310,10 +343,10 @@ def _parse_feed(raw, source, now):
         if raw_expiry and (expiry is None or expiry <= now):
             continue
         url = _article_url(raw_url, source)
-        title = _plain_text(raw_title, 180)
+        title = _plain_text(raw_title)
         if not url or not title:
             continue
-        summary = _plain_text(raw_summary, 450)
+        summary = _plain_text(raw_summary)
         classification = classify(title, summary)
         if classification is None:
             continue
@@ -321,14 +354,15 @@ def _parse_feed(raw, source, now):
         fields, stages = classification
         item = {
             "id": f"news-{sha256(url.encode()).hexdigest()[:32]}",
-            "title": title,
-            "summary": summary,
+            "title": _shorten(title, 180),
+            "summary": _shorten(summary, 450),
             "url": url,
             "source": source.name,
             "country": source.country,
             "published_at": published.isoformat(),
             "fields": fields,
             "stages": stages,
+            "occupations": occupation_topics(title),
         }
         if expiry:
             item["expires_at"] = expiry.isoformat()

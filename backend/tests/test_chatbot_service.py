@@ -250,6 +250,17 @@ class ChatbotRouteTests(unittest.TestCase):
             },
         )
 
+    def test_saved_guidance_does_not_call_the_model(self):
+        self.db.refresh.side_effect = lambda message: setattr(message, "message_id", uuid4())
+        with patch.object(
+            chatbot_routes, "answer_from_saved_guidance",
+            return_value=chatbot_service.ChatbotReply("Start with SQL.", "profile_guidance"),
+        ):
+            response = self.ask()
+        self.ask_provider.assert_not_called()
+        self.assertEqual(response["reply_mode"], "profile_guidance")
+        self.assertEqual(response["response"], "Start with SQL.")
+
 
 if __name__ == "__main__":
     unittest.main()

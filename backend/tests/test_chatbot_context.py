@@ -8,7 +8,7 @@ from types import SimpleNamespace as Record
 from unittest.mock import patch
 
 with patch("dotenv.load_dotenv"), patch.dict(os.environ, {"OPENROUTER_API_KEY": ""}):
-    from app.services.chatbot_service import build_chatbot_context
+    from app.services.chatbot_service import answer_from_saved_guidance, build_chatbot_context
 
 
 class ChatbotContextTests(unittest.TestCase):
@@ -99,6 +99,35 @@ class ChatbotContextTests(unittest.TestCase):
         for name in ("recommendations", "roadmap", "learning_resources", "video_courses",
                      "saved_careers", "recent_chat"):
             self.assertEqual(context[name], [])
+
+    def test_profile_guidance_uses_selected_career_skills_and_saved_links(self):
+        raw = build_chatbot_context(
+            self.user,
+            profile=Record(academic_level="Bachelor", skills=["Python"]),
+            selected_career=self.career,
+            learning_resources=[
+                Record(title="SQL lesson", url="https://example.com/sql"),
+                Record(title="Unsafe link", url="javascript:alert(1)"),
+            ],
+        )
+        skills = answer_from_saved_guidance("What skills should I improve first?", raw)
+        self.assertEqual(skills.mode, "profile_guidance")
+        self.assertIn("sql", skills)
+        self.assertNotIn("python", skills)
+        resources = answer_from_saved_guidance("Suggest free resources for my missing skills.", raw)
+        self.assertIn("https://example.com/sql", resources)
+        self.assertNotIn("Unsafe link", resources)
+        self.assertIsNone(answer_from_saved_guidance("How does a database index work?", raw))
+
+    def test_matric_roadmap_starts_with_the_next_education_stage(self):
+        raw = build_chatbot_context(
+            self.user, profile=Record(academic_level="Matric"),
+            selected_career=self.career,
+            roadmap_stages=[Record(stage_order=1, title="Apply to internships", suggested_resources=[])],
+        )
+        reply = answer_from_saved_guidance("Show my roadmap", raw)
+        self.assertIn("senior-secondary", reply)
+        self.assertNotIn("Apply to internships", reply)
 
 
 if __name__ == "__main__":

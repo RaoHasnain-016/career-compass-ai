@@ -77,6 +77,19 @@ class CareerNewsParsingTests(unittest.TestCase):
         self.assertEqual(graduate["stages"], ["undergraduate", "postgraduate"])
         self.assertEqual(undergraduate["stages"], ["senior_secondary", "undergraduate"])
 
+    def test_headline_roles_and_stage_markers_are_classified_before_display_truncation(self):
+        source = news._SOURCES[0]
+        long_summary = ("Skills and workforce research. " * 25) + "The data covers doctoral education."
+        body = rss((
+            "Career outlook for software engineers and security analysts", long_summary,
+            f"https://{source.host}/whatsnew.html#software", NOW,
+        ))
+        item, = news._parse_feed(body, source, NOW)
+
+        self.assertEqual(item["occupations"], ["software"])
+        self.assertEqual(item["stages"], ["undergraduate", "postgraduate"])
+        self.assertNotIn("doctoral", item["summary"])
+
     def test_higher_apprenticeship_is_never_offered_to_diploma_or_school(self):
         source = news._SOURCES[1]
         body = rss(

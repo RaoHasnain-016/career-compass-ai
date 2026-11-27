@@ -20,12 +20,14 @@ with (
 class RecommendationRankingApiTests(unittest.TestCase):
     def setUp(self):
         user_id = uuid4()
+        self.user_id = user_id
         self.profile = routes.StudentProfile(user_id=user_id)
         self.rows = []
-        for title, score in [("Software Engineer", 70.5), ("IT Support Technician", 55)]:
-            career = routes.Career(career_id=uuid4(), title=title)
+        for title, score, field in [("Software Engineer", 70.5, "Technology"), ("IT Support Technician", 55, "Technology")]:
+            career = routes.Career(career_id=uuid4(), title=title, status=True, field=field)
             self.rows.append(routes.Recommendation(
-                recommendation_id=uuid4(), career=career, user_id=user_id, match_score=score,
+                recommendation_id=uuid4(), career=career, career_id=career.career_id,
+                user_id=user_id, match_score=score, eligibility_status="eligible",
             ))
 
         self.db = Mock()
@@ -33,10 +35,15 @@ class RecommendationRankingApiTests(unittest.TestCase):
         recommendations.options.return_value.filter.return_value.order_by.return_value.all.return_value = self.rows
         profile = Mock()
         profile.filter.return_value.first.return_value = self.profile
-        self.db.query.side_effect = {
-            routes.Recommendation: recommendations,
-            routes.StudentProfile: profile,
-        }.__getitem__
+        preferences = Mock()
+        self.preference_filter = preferences.select_from.return_value.join.return_value.filter
+        self.preference_filter.return_value.all.return_value = []
+        queries = {
+            (routes.Recommendation,): recommendations,
+            (routes.StudentProfile,): profile,
+            (routes.SavedCareer.career_id, routes.Career.field): preferences,
+        }
+        self.db.query.side_effect = lambda *entities: queries[entities]
 
         app = FastAPI()
         app.include_router(routes.router)
@@ -85,3 +92,34 @@ class RecommendationRankingApiTests(unittest.TestCase):
         self.assertEqual(payload["ranking_source"], "rules")
         self.assertEqual([row["match_score"] for row in payload["recommendations"]], [70.5, 55])
         self.assertTrue(all("model_rank" not in row for row in payload["recommendations"]))
+
+    def test_personalized_order_uses_only_authenticated_students_bookmarks(self):
+        self.rows[1].match_score = 68
+        self.preference_filter.return_value.all.return_value = [(self.rows[1].career_id, " Technology ")]
+        response = self.client.get("/recommendations/me?ranking=personalized")
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload["ranking_source"], "personalized")
+        self.assertEqual([row["match_score"] for row in payload["recommendations"]], [68, 70.5])
+        self.assertEqual([row["personalization_reason"] for row in payload["recommendations"]], ["saved_career", "saved_field"])
+        owner_filter, active_filter = self.preference_filter.call_args.args
+        self.assertTrue(owner_filter.compare(routes.SavedCareer.user_id == self.user_id))
+        self.assertTrue(active_filter.compare(routes.Career.status.is_(True)))
+        self.model.assert_not_called()
+        self.db.commit.assert_not_called()
+
+        self.preference_filter.return_value.all.return_value = []
+        refreshed = self.client.get("/recommendations/me?ranking=personalized").json()
+        self.assertEqual(refreshed["ranking_source"], "rules")
+        self.assertEqual([row["match_score"] for row in refreshed["recommendations"]], [70.5, 68])
+
+    def test_aspirational_bookmark_does_not_override_eligibility(self):
+        self.rows[0].eligibility_status = "foundation_stage"
+        self.preference_filter.return_value.all.return_value = [(self.rows[0].career_id, "Technology")]
+        response = self.client.get("/recommendations/me?ranking=personalized")
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertEqual(payload["ranking_source"], "personalized")
+        self.assertEqual([row["match_score"] for row in payload["recommendations"]], [55, 70.5])
+        self.assertEqual(payload["recommendations"][0]["personalization_reason"], "saved_field")
+        self.assertNotIn("personalization_reason", payload["recommendations"][1])

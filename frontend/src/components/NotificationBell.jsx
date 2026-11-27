@@ -11,7 +11,7 @@ export default function NotificationBell() {
   const bell = useRef(null);
   const container = useRef(null);
   const notifications = useStudentNotifications();
-  const { data, loading, error, reading, readError, markRead, refresh } = notifications;
+  const { data, loading, error, reading, readError, markRead, refresh, refreshOnOpen } = notifications;
   const unread = data?.unread_count || 0;
   const items = data?.items.slice(0, 4) || [];
 
@@ -44,7 +44,10 @@ export default function NotificationBell() {
         aria-label={unread ? `Notifications, ${unread} unread` : "Notifications"}
         aria-controls={panelId}
         aria-expanded={expanded}
-        onClick={() => setExpanded(!expanded)}
+        onClick={() => {
+          if (!expanded) refreshOnOpen();
+          setExpanded(!expanded);
+        }}
       >
         <FaBell aria-hidden="true" />
         {unread > 0 && <span className="student-bell-count" aria-hidden="true">{unread > 99 ? "99+" : unread}</span>}

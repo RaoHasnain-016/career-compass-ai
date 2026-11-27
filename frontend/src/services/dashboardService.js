@@ -46,7 +46,7 @@ export async function getDashboardData() {
       getOptional(`/resources/recommended/${careerId}`, {
         recommended_resources: [],
       }),
-      getOptional(`/resources/videos/${careerId}`, { video_courses: [] }),
+      getOptional(`/resources/videos/${careerId}?live=false`, { video_courses: [] }),
     ]);
   }
 

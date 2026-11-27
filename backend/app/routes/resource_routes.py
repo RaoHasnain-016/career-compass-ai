@@ -8,10 +8,9 @@ from app.models.user_model import User
 from app.models.profile_model import StudentProfile
 from app.models.career_model import Career
 from app.models.resource_model import LearningResource
-from app.models.video_resource_model import VideoResource
 from app.schemas.resource_schema import LearningResourceCreate, LearningResourceUpdate
 from app.services.resource_service import find_missing_skills, is_resource_relevant
-from app.services.youtube_service import search_youtube_videos
+from app.services.video_learning_service import recommend_video_courses
 from app.utils.auth_dependency import get_current_firebase_user
 
 router = APIRouter(
@@ -47,23 +46,6 @@ def resource_to_dict(resource: LearningResource):
         "description": resource.description,
         "is_free": resource.is_free,
         "status": resource.status,
-    }
-
-
-def video_to_dict(video: VideoResource):
-    return {
-        "video_resource_id": str(video.video_resource_id),
-        "youtube_video_id": video.youtube_video_id,
-        "title": video.title,
-        "channel_title": video.channel_title,
-        "thumbnail_url": video.thumbnail_url,
-        "video_url": video.video_url,
-        "skill": video.skill,
-        "career_field": video.career_field,
-        "difficulty": video.difficulty,
-        "source": video.source,
-        "is_free": video.is_free,
-        "status": video.status,
     }
 
 
@@ -180,7 +162,8 @@ def get_recommended_resources(
 def get_recommended_video_courses(
     career_id: UUID,
     firebase_user=Depends(get_current_firebase_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    live: bool = True,
 ):
     user = get_current_db_user(firebase_user, db)
 
@@ -196,7 +179,7 @@ def get_recommended_video_courses(
             detail="Student profile not found. Please complete your profile first."
         )
 
-    career = db.query(Career).filter(Career.career_id == career_id).first()
+    career = db.query(Career).filter(Career.career_id == career_id, Career.status.is_(True)).first()
 
     if not career:
         raise HTTPException(
@@ -204,82 +187,22 @@ def get_recommended_video_courses(
             detail="Career not found"
         )
 
-    missing_skills = find_missing_skills(
-        student_skills=profile.skills,
-        required_skills=career.required_skills
-    )
-
-    recommended_videos = []
-
-    for skill in missing_skills[:5]:
-        cached_videos = (
-            db.query(VideoResource)
-            .filter(
-                VideoResource.skill.ilike(skill),
-                VideoResource.career_field == career.field,
-                VideoResource.status == True,
-            )
-            .limit(5)
-            .all()
-        )
-
-        if cached_videos:
-            recommended_videos.extend(cached_videos)
-            continue
-
-        query = f"{skill} full course beginner {career.title}"
-
-        youtube_results = search_youtube_videos(
-            query=query,
-            max_results=5
-        )
-
-        for item in youtube_results:
-            existing_video = (
-                db.query(VideoResource)
-                .filter(
-                    VideoResource.youtube_video_id == item["youtube_video_id"]
-                )
-                .first()
-            )
-
-            if existing_video:
-                recommended_videos.append(existing_video)
-                continue
-
-            video = VideoResource(
-                youtube_video_id=item["youtube_video_id"],
-                title=item["title"],
-                channel_title=item["channel_title"],
-                thumbnail_url=item["thumbnail_url"],
-                video_url=item["video_url"],
-                skill=skill,
-                career_field=career.field,
-                difficulty="Beginner",
-                source="YouTube",
-                is_free=True,
-                status=True,
-            )
-
-            db.add(video)
-            db.commit()
-            db.refresh(video)
-
-            recommended_videos.append(video)
-
+    career_info = {
+        "career_id": str(career.career_id),
+        "title": career.title,
+        "field": career.field,
+    }
+    student_skills = profile.skills or []
+    required_skills = career.required_skills or []
+    missing_skills = find_missing_skills(student_skills, required_skills)
     return {
-        "career": {
-            "career_id": str(career.career_id),
-            "title": career.title,
-            "field": career.field,
-        },
-        "student_skills": profile.skills or [],
-        "required_skills": career.required_skills or [],
+        "career": career_info,
+        "student_skills": student_skills,
+        "required_skills": required_skills,
         "missing_skills": missing_skills,
-        "video_courses": [
-            video_to_dict(video)
-            for video in recommended_videos
-        ]
+        "video_courses": recommend_video_courses(
+            db, career_info["title"], career_info["field"], required_skills, missing_skills, live=live,
+        ),
     }
 
 

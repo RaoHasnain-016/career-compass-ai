@@ -8,7 +8,8 @@ from app.models.user_model import User
 from app.models.profile_model import StudentProfile
 from app.models.career_model import Career
 from app.models.recommendation_model import Recommendation
-from app.services.career_ranker import rank_recommendations, ranker_configured
+from app.models.saved_career_model import SavedCareer
+from app.services.career_ranker import personalize_recommendations, rank_recommendations, ranker_configured
 from app.services.recommendation_service import generate_recommendation_analysis
 from app.services.student_updates_service import record_student_update
 from app.utils.auth_dependency import get_current_firebase_user
@@ -17,6 +18,8 @@ router = APIRouter(
     prefix="/recommendations",
     tags=["Recommendations"]
 )
+
+Ranking = Literal["rules", "model", "personalized"]
 
 
 def get_current_db_user(firebase_user, db: Session):
@@ -65,15 +68,35 @@ def recommendation_to_dict(recommendation: Recommendation):
     }
 
 
-def ranked_payload(recommendations, profile, ranking):
+def get_saved_ranking_preferences(db, user_id):
+    return (
+        db.query(SavedCareer.career_id, Career.field)
+        .select_from(SavedCareer)
+        .join(Career, SavedCareer.career_id == Career.career_id)
+        .filter(SavedCareer.user_id == user_id, Career.status.is_(True))
+        .all()
+    )
+
+
+def ranked_payload(recommendations, profile, ranking, saved_careers=()):
     model_available = ranker_configured()
     ordered, source = recommendations, "rules"
+    reasons = {}
     if ranking == "model" and model_available:
         ordered, source = rank_recommendations(profile, recommendations)
+    elif ranking == "personalized" and saved_careers:
+        ordered, reasons = personalize_recommendations(recommendations, saved_careers)
+        if reasons:
+            source = "personalized"
+
     rows = [recommendation_to_dict(item) for item in ordered]
     if source == "trained":
         for rank, row in enumerate(rows, 1):
             row["model_rank"] = rank
+    elif reasons:
+        for item, row in zip(ordered, rows):
+            if item.career_id in reasons:
+                row["personalization_reason"] = reasons[item.career_id]
     return {
         "ranking_source": source,
         "model_ranking_available": model_available,
@@ -85,7 +108,7 @@ def ranked_payload(recommendations, profile, ranking):
 def generate_recommendations(
     firebase_user=Depends(get_current_firebase_user),
     db: Session = Depends(get_db),
-    ranking: Literal["rules", "model"] = "rules",
+    ranking: Ranking = "rules",
 ):
     user = get_current_db_user(firebase_user, db)
 
@@ -155,11 +178,12 @@ def generate_recommendations(
         key=lambda item: float(item.match_score),
         reverse=True
     )
+    saved_careers = get_saved_ranking_preferences(db, user.user_id) if ranking == "personalized" else ()
 
     return {
         "message": "Recommendations generated successfully",
         "total_careers_analyzed": len(careers),
-        **ranked_payload(generated_recommendations, profile, ranking),
+        **ranked_payload(generated_recommendations, profile, ranking, saved_careers),
     }
 
 
@@ -167,7 +191,7 @@ def generate_recommendations(
 def get_my_recommendations(
     firebase_user=Depends(get_current_firebase_user),
     db: Session = Depends(get_db),
-    ranking: Literal["rules", "model"] = "rules",
+    ranking: Ranking = "rules",
 ):
     user = get_current_db_user(firebase_user, db)
 
@@ -182,4 +206,5 @@ def get_my_recommendations(
     profile = None
     if recommendations and ranking == "model" and ranker_configured():
         profile = db.query(StudentProfile).filter(StudentProfile.user_id == user.user_id).first()
-    return ranked_payload(recommendations, profile, ranking)
+    saved_careers = get_saved_ranking_preferences(db, user.user_id) if recommendations and ranking == "personalized" else ()
+    return ranked_payload(recommendations, profile, ranking, saved_careers)

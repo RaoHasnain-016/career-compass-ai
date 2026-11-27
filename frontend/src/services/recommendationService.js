@@ -13,8 +13,9 @@ export async function getMyRecommendations() {
   return recommendations;
 }
 
-export async function getMyRecommendationRanking(useModel = false) {
-  const response = await get(useModel ? "/recommendations/me?ranking=model" : "/recommendations/me");
+export async function getMyRecommendationRanking(ranking = "rules") {
+  const query = ranking === "rules" ? "" : `?ranking=${encodeURIComponent(ranking)}`;
+  const response = await get(`/recommendations/me${query}`);
   return {
     recommendations: normalizeRecommendations(response),
     rankingSource: response?.ranking_source,

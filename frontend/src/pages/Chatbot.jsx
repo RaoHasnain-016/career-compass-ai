@@ -9,6 +9,7 @@ import {
   FaHistory,
   FaLightbulb,
   FaPaperPlane,
+  FaPlayCircle,
   FaRobot,
   FaUserCircle,
 } from "react-icons/fa";
@@ -38,6 +39,11 @@ const suggestedQuestions = [
     label: "Resources",
     text: "Suggest free resources for my missing skills.",
     icon: <FaLightbulb />,
+  },
+  {
+    label: "Video lessons",
+    text: "Show video lessons for my missing skills.",
+    icon: <FaPlayCircle />,
   },
   {
     label: "Study options",
@@ -401,6 +407,7 @@ export default function Chatbot() {
                         <p className="chat-evidence-mode">{{
                           local_llm: "Local model",
                           knowledge_fallback: "Saved guidance",
+                          profile_guidance: "Career Compass guidance",
                           official_sources: "Official-source lookup",
                         }[message.replyMode]}</p>
                         {message.sourceStatus === "stale" && <p>Some sources are showing their previous check.</p>}

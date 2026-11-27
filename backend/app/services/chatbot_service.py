@@ -2,10 +2,13 @@ import json
 import logging
 import os
 import re
+from urllib.parse import urlsplit
 from dotenv import load_dotenv
 from openai import APIConnectionError, APIStatusError, APITimeoutError, OpenAI
 
+from app.services.education_stage_service import education_stage
 from app.services.local_chat_service import ask_local_chatbot, build_local_knowledge_fallback
+from app.services.resource_service import find_missing_skills
 
 load_dotenv()
 
@@ -177,6 +180,72 @@ def build_resilient_career_reply(user_message: str, context: str) -> str:
     return f"Your current top path is {title}. The best next action is to work on {next_skill} and record your progress in the roadmap."
 
 
+_PROFILE_QUESTIONS = {
+    "which career is best for me based on my profile": "match",
+    "why is this career recommended": "match",
+    "what skills should i improve first": "skills",
+    "what are my missing skills": "skills",
+    "explain the roadmap for my top recommendation": "roadmap",
+    "show my roadmap": "roadmap",
+    "suggest free resources for my missing skills": "resources",
+    "give me resources": "resources",
+    "show video lessons for my missing skills": "videos",
+}
+
+
+def answer_from_saved_guidance(user_message: str, context: str):
+    question = user_message.strip().casefold().rstrip(".?!")
+    topic = _PROFILE_QUESTIONS.get(question)
+    if topic is None:
+        return None
+
+    data = json.loads(context)
+    profile = data.get("profile")
+    if not profile:
+        return ChatbotReply("Complete Profile Setup to get guidance for your education stage and skills.", "profile_guidance")
+
+    recommendations = data["recommendations"]
+    selected = data["selected_career"]
+    career = selected or next(iter(recommendations), {})
+    title = career.get("title")
+    if not title:
+        return ChatbotReply("Generate your career recommendations, then choose a path to explore.", "profile_guidance")
+
+    recommendation = next((row for row in recommendations if row.get("title") == title), {})
+    replies = {
+        "match": f"Your current career path is **{title}**. "
+                 + (recommendation.get("explanation") or "Open Recommendations to compare it with your other matches."),
+        "skills": f"Open Skill Gap for the full requirements for **{title}**.",
+        "roadmap": f"Open Roadmap for the available steps for **{title}**.",
+    }
+    if topic == "skills":
+        missing = find_missing_skills(profile.get("skills"), selected.get("required_skills")) if selected else recommendation.get("missing_skills")
+        if missing:
+            replies[topic] = f"For **{title}**, start with {', '.join(missing[:3])}. Open Skill Gap to see all requirements."
+    if topic == "roadmap":
+        stages = data["roadmap"][:3]
+        if education_stage(profile.get("academic_level")) == "school":
+            replies[topic] = f"To explore **{title}**, first compare senior-secondary subject groups and recognised technical options. Check which subjects keep that path open."
+        elif stages:
+            replies[topic] = f"Start with these roadmap steps for **{title}**.\n" + "\n".join(f"- {stage['title']}" for stage in stages)
+    if topic in {"resources", "videos"}:
+        resources = data["video_courses"] if topic == "videos" else [*data["learning_resources"], *data["video_courses"]]
+        items = []
+        for resource in resources:
+            link = resource.get("url") or ""
+            try:
+                url = urlsplit(link)
+            except ValueError:
+                continue
+            if url.scheme in {"http", "https"} and url.hostname and not url.username and not url.password:
+                items.append(f"- {resource['title']}\n  {link}")
+        replies[topic] = (
+            f"Try these saved resources for **{title}**.\n" + "\n".join(items[:3]) if items else
+            f"Open Learning Resources to find lessons and videos for **{title}**."
+        )
+    return ChatbotReply(replies[topic], "profile_guidance")
+
+
 
 def ask_career_chatbot(user_message: str, context: str):
     if CHATBOT_PROVIDER == "local":
@@ -267,7 +336,7 @@ Student Question:
         )
         if error.status_code == 429:
             logger.warning("All free chatbot providers are temporarily capped; using profile guidance.")
-            return build_resilient_career_reply(user_message, context)
+            return ChatbotReply(build_resilient_career_reply(user_message, context), "knowledge_fallback")
         elif error.status_code in (401, 402, 403, 404):
             detail = "The AI assistant is unavailable because of a provider configuration issue. Please contact the administrator."
         else:
