@@ -209,7 +209,7 @@ def ask_chatbot(
                 from_thread.run(retrieve_chat_evidence, topic, audience) if audience else
                 empty_evidence(topic, stage, "offline" if profile is not None else "profile_needed")
             )
-            ai_response = ChatbotReply(evidence_only_answer(evidence), "official_sources")
+            ai_response = ChatbotReply(evidence_only_answer(evidence, request.message), "official_sources")
         elif pilot_requested:
             if not pilot_available or len(request.message.strip()) > 1600:
                 raise LocalChatError("The conversation pilot is unavailable for this request.")

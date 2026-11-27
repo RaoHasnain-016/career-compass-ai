@@ -47,6 +47,14 @@ class LocalChatError(RuntimeError):
     pass
 
 
+def reply_language(question):
+    if _ENGLISH_REQUEST.search(question):
+        return "en"
+    if _ARABIC_SCRIPT.search(question) or _URDU_SCRIPT_REQUEST.search(question):
+        return "ur"
+    return "ur-Latn" if _ROMAN_URDU.search(question) else "en"
+
+
 @dataclass(frozen=True)
 class LocalChatSettings:
     model_path: str
