@@ -92,6 +92,24 @@ class LocalChatServiceTests(unittest.TestCase):
         with self.assertRaisesRegex(local_chat_service.LocalChatError, "unverified link"):
             local_chat_service.ask_local_chatbot(untrusted_url, json.dumps({"recent_chat": [{"response": untrusted_url}]}))
 
+    def test_rejects_repetitive_or_wrong_script_replies(self):
+        for question, answer, reason in (
+            ("What should I try?", "Start with Excel. Start with Excel. Start with Excel.", "repeated"),
+            ("آج کون سا کام کروں؟", "میں دیکھوں گا گا گا۔", "repeated"),
+            ("آج کون سا کام کروں؟", "Start with the first roadmap task.", "script"),
+        ):
+            with self.subTest(reason=reason, question=question):
+                self.runtime.create_chat_completion.return_value = completion(answer)
+                with self.assertRaisesRegex(local_chat_service.LocalChatError, reason):
+                    local_chat_service.ask_local_chatbot(question, "{}")
+
+    def test_urdu_question_can_request_english(self):
+        self.runtime.create_chat_completion.return_value = completion("Start with the first roadmap task.")
+        self.assertEqual(
+            local_chat_service.ask_local_chatbot("آج کون سا کام کروں؟ جواب انگریزی میں دیں۔", "{}"),
+            "Start with the first roadmap task.",
+        )
+
     def test_busy_model_does_not_load_or_queue(self):
         with local_chat_service._RUNTIME_LOCK:
             with self.assertRaisesRegex(local_chat_service.LocalChatError, "busy"):

@@ -22,6 +22,8 @@ _THINK = re.compile(r"<think>.*?</think>", re.IGNORECASE | re.DOTALL)
 _STOP_SUFFIX = re.compile(r"(?:\s*\[end of text\]|\s*<\|im_end\|>)+\s*$", re.IGNORECASE)
 _ARABIC_SCRIPT = re.compile(r"[\u0621-\u064a\u066e-\u06d3\u06d5]")
 _ROMAN_URDU = re.compile(r"\b(mujhe|mujhay|konsi|kaise|chahiye|seekhni|karo|mera|meri|batao|karun|hain|parhai)\b", re.IGNORECASE)
+_REPEATED_PHRASE = re.compile(r"(?<!\w)(\w+(?:\s+\w+){0,7})(?:[\s,.;:،۔]+\1){2,}(?!\w)")
+_ENGLISH_REQUEST = re.compile(r"\b(?:in English|English please)\b|انگریزی میں", re.IGNORECASE)
 _SECTIONS = (
     ("live_evidence", 4), ("profile", 1), ("selected_career", 1),
     ("recommendations", 3), ("roadmap", 4), ("learning_resources", 4),
@@ -233,6 +235,13 @@ def _clean_answer(completion, evidence, question=""):
         raise LocalChatError("The local model repeated the input instead of answering.")
     if question and answer.strip("'\"").strip().casefold() == question.strip().casefold():
         raise LocalChatError("The local model echoed the question.")
+    if _REPEATED_PHRASE.search(answer.casefold()):
+        raise LocalChatError("The local model repeated part of its answer.")
+    question_letters = sum(char.isalpha() for char in question)
+    urdu_letters = len(_ARABIC_SCRIPT.findall(question))
+    if urdu_letters >= 4 and urdu_letters * 2 > question_letters and not _ENGLISH_REQUEST.search(question):
+        if not _ARABIC_SCRIPT.search(answer):
+            raise LocalChatError("The local model switched away from the requested script.")
 
     allowed = {url for key in _TRUSTED_LINK_SECTIONS for url in _urls_in(evidence.get(key))}
     urls = {url.rstrip(".,;:!?") for url in _URL.findall(answer)}

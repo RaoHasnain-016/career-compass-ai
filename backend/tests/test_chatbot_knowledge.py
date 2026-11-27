@@ -17,6 +17,7 @@ class ChatKnowledgeTests(IsolatedAsyncioTestCase):
     def test_questions_select_the_correct_source(self):
         self.assertEqual(service.knowledge_topic("Which universities should I consider?"), "study_options")
         self.assertEqual(service.knowledge_topic("What is the admissions deadline?"), "admissions")
+        self.assertEqual(service.knowledge_topic("Can I apply this Friday from the update in the app?"), "admissions")
         self.assertEqual(service.knowledge_topic("Latest career news?"), "career_news")
         self.assertIsNone(service.knowledge_topic("How do I learn Python?"))
 

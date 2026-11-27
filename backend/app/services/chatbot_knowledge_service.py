@@ -9,6 +9,8 @@ from app.services.university_suggestion_service import get_university_suggestion
 
 _STUDY_QUESTION = re.compile(
     r"\b(admissions?|deadlines?|scholarships?|dakhla|dakhle|akhri tareekh)\b"
+    r"|\b(?:can|could|should) i apply (?:today|tomorrow|this (?:week|month|monday|tuesday|"
+    r"wednesday|thursday|friday|saturday|sunday))\b"
     r"|داخل[ہے]|وظیف[ہے]|آخری تاریخ", re.IGNORECASE,
 )
 _UNIVERSITY_QUESTION = re.compile(r"\b(universit\w*|colleges?|study abroad)\b|یونیورسٹ", re.IGNORECASE)
