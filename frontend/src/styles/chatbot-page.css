@@ -239,6 +239,8 @@
 .chat-content {
   display: grid;
   gap: 10px;
+  overflow-wrap: anywhere;
+  text-align: start;
 }
 
 .chat-evidence {

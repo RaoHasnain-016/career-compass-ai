@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 from openai import APIConnectionError, APIStatusError, APITimeoutError, OpenAI
 
 from app.services.education_stage_service import education_stage
-from app.services.local_chat_service import ask_local_chatbot, build_local_knowledge_fallback
+from app.services.local_chat_service import ask_local_chatbot, build_local_knowledge_fallback, reply_language
 from app.services.resource_service import find_missing_skills
 
 load_dotenv()
@@ -199,6 +199,11 @@ _FALLBACK_QUESTIONS = (
     ("skills", r"\b(skills?|learn first|what should i learn)\b"),
     ("match", r"\b(my career|best career|career match|recommendations?)\b"),
 )
+_CLARIFY_QUESTION = {
+    "en": "What are you trying to work out? Tell me the topic and one detail about where you're stuck, and we can work through it together.",
+    "ur": "آپ کیا سمجھنا یا طے کرنا چاہتے ہیں؟ اپنا سوال اور ایک اہم تفصیل بتائیں، ہم اسے مرحلہ وار دیکھ سکتے ہیں۔",
+    "ur-Latn": "Aap kya samajhna ya decide karna chahte hain? Sawal ke saath ek zaroori detail bata dein, phir hum usay step by step dekh sakte hain.",
+}
 
 
 def answer_from_saved_guidance(user_message: str, context: str, *, fallback=False):
@@ -208,11 +213,7 @@ def answer_from_saved_guidance(user_message: str, context: str, *, fallback=Fals
     if topic is None and fallback:
         topic = next((intent for intent, pattern in _FALLBACK_QUESTIONS if re.search(pattern, question)), None)
         if topic is None:
-            return ChatbotReply(
-                "I can guide you through your career matches, missing skills, roadmap, and saved lessons. "
-                "Try a suggested question for one of those topics.",
-                mode,
-            )
+            return ChatbotReply(_CLARIFY_QUESTION[reply_language(user_message)], mode)
     if topic is None:
         return None
 
@@ -353,6 +354,8 @@ Student Question:
         )
         if error.status_code == 429:
             logger.warning("All free chatbot providers are temporarily capped; using profile guidance.")
+            if not any(re.search(pattern, user_message, re.IGNORECASE) for _, pattern in _FALLBACK_QUESTIONS):
+                return ChatbotReply(_CLARIFY_QUESTION[reply_language(user_message)], "knowledge_fallback")
             return ChatbotReply(build_resilient_career_reply(user_message, context), "knowledge_fallback")
         elif error.status_code in (401, 402, 403, 404):
             detail = "The AI assistant is unavailable because of a provider configuration issue. Please contact the administrator."

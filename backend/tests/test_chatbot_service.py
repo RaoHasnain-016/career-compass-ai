@@ -1,5 +1,6 @@
 """Run from backend with: python -m unittest discover -s tests -v."""
 
+import json
 import os
 import unittest
 from types import SimpleNamespace
@@ -253,6 +254,39 @@ class ChatbotRouteTests(unittest.TestCase):
         self.ask_provider.assert_not_called()
         self.assertEqual(response["reply_mode"], "profile_guidance")
         self.assertEqual(response["response"], "Start with SQL.")
+
+    def test_standalone_greetings_and_calculations_skip_profile_and_model(self):
+        self.db.refresh.side_effect = lambda message: setattr(message, "message_id", uuid4())
+        for message, mode, expected in (
+            ("Hi!", "casual_chat", "Hi"),
+            ("AOA", "casual_chat", "Wa alaikum"),
+            ("72 out of 90 as a percentage", "general_guidance", "80%"),
+        ):
+            with self.subTest(message=message):
+                response = self.ask(message=message)
+                self.assertEqual(response["reply_mode"], mode)
+                self.assertIn(expected.casefold(), response["response"].casefold())
+        self.db.query.assert_not_called()
+        self.assertEqual(self.db.commit.call_count, 3)
+        self.ask_provider.assert_not_called()
+
+    def test_comparison_uses_saved_facts_without_a_model(self):
+        self.db.refresh.side_effect = lambda message: setattr(message, "message_id", uuid4())
+        context = json.dumps({
+            "profile": {"academic_level": "Matric"},
+            "recommendations": [
+                {"title": "Data Analyst", "match_score": 82, "matched_subjects": ["Mathematics"]},
+                {"title": "Graphic Designer", "match_score": 73, "missing_skills": ["Typography"]},
+            ],
+        })
+        with patch.object(chatbot_routes, "build_chatbot_context", return_value=context):
+            response = self.ask(message="Hi, compare my top two careers.")
+        self.assertEqual(response["reply_mode"], "profile_analysis")
+        self.assertIn("Data Analyst", response["response"])
+        self.assertIn("Graphic Designer", response["response"])
+        self.assertIn("Mathematics", response["response"])
+        self.assertIn("Typography", response["response"])
+        self.ask_provider.assert_not_called()
 
     def test_pilot_is_opt_in_and_keeps_database_connection_out_of_generation(self):
         self.db.refresh.side_effect = lambda message: setattr(message, "message_id", uuid4())

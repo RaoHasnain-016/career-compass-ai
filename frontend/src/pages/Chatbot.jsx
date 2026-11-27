@@ -2,10 +2,12 @@ import { useEffect, useRef, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import {
+  FaBalanceScale,
   FaBolt,
   FaBrain,
   FaCheckCircle,
   FaClock,
+  FaComment,
   FaHistory,
   FaLightbulb,
   FaPaperPlane,
@@ -24,6 +26,16 @@ const suggestedQuestions = [
     label: "Best career",
     text: "Which career is best for me based on my profile?",
     icon: <FaBrain />,
+  },
+  {
+    label: "Compare careers",
+    text: "Compare my top two careers.",
+    icon: <FaBalanceScale />,
+  },
+  {
+    label: "Why this career?",
+    text: "Why was this career recommended?",
+    icon: <FaLightbulb />,
   },
   {
     label: "Skills first",
@@ -50,7 +62,23 @@ const suggestedQuestions = [
     text: "Which universities or colleges should I consider at my current stage?",
     icon: <FaBrain />,
   },
+  {
+    label: "Say hello",
+    text: "AOA",
+    icon: <FaComment />,
+  },
 ];
+
+const replyModeLabels = {
+  casual_chat: "Conversation",
+  profile_analysis: "Profile analysis",
+  general_guidance: "Quick answer",
+  local_llm: "Local model",
+  conversation_pilot: "Conversational pilot",
+  knowledge_fallback: "Saved guidance",
+  profile_guidance: "Career Compass guidance",
+  official_sources: "Official-source lookup",
+};
 
 const messageVariants = {
   hidden: { opacity: 0, y: 14, scale: 0.98 },
@@ -118,7 +146,7 @@ function renderInline(text) {
 
     if (/^https?:\/\//.test(part)) {
       return (
-        <a key={`${part}-${index}`} href={part} target="_blank" rel="noreferrer">
+        <a key={`${part}-${index}`} href={part} target="_blank" rel="noreferrer" dir="ltr">
           {part}
         </a>
       );
@@ -226,7 +254,7 @@ export default function Chatbot() {
     {
       role: "assistant",
       text:
-        "What would you like help with: choosing a career, learning a skill, or planning your next step? Ask in your preferred language.",
+        "Hi! What are you thinking about? We can compare careers, work through a skill gap, or talk about what to do next. Ask in English, Urdu, or Roman Urdu.",
       id: "welcome",
       createdAt: new Date().toISOString(),
     },
@@ -407,13 +435,9 @@ export default function Chatbot() {
                     </div>
                     {message.replyMode && (
                       <div className="chat-evidence">
-                        <p className="chat-evidence-mode">{{
-                          local_llm: "Local model",
-                          conversation_pilot: "Conversational pilot",
-                          knowledge_fallback: "Saved guidance",
-                          profile_guidance: "Career Compass guidance",
-                          official_sources: "Official-source lookup",
-                        }[message.replyMode]}</p>
+                        {replyModeLabels[message.replyMode] && (
+                          <p className="chat-evidence-mode">{replyModeLabels[message.replyMode]}</p>
+                        )}
                         {message.sourceStatus === "stale" && <p>Some sources are showing their previous check.</p>}
                         {message.sourcesCheckedAt && <p>Sources checked {formatUpdateDate(message.sourcesCheckedAt)}</p>}
                         {!!message.sources?.length && (
@@ -480,7 +504,7 @@ export default function Chatbot() {
               dir="auto"
               value={input}
               onChange={(event) => setInput(event.target.value)}
-              placeholder="Ask about careers in your preferred language..."
+              placeholder="Say hi or ask a question…"
               maxLength={usePilot ? 1600 : undefined}
               rows={1}
               onKeyDown={(event) => {

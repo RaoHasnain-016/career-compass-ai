@@ -17,6 +17,8 @@ from app.models.resource_model import LearningResource
 from app.models.saved_career_model import SavedCareer
 from app.models.chat_model import ChatMessage
 from app.schemas.chatbot_schema import ChatbotRequest
+from app.services.casual_chat_service import answer_casual_chat
+from app.services.chatbot_analysis_service import answer_profile_analysis
 from app.services.chatbot_service import (
     CHATBOT_PROVIDER,
     ChatbotReply,
@@ -29,6 +31,7 @@ from app.services.career_ranker import rank_recommendations, ranker_configured
 from app.services.chatbot_knowledge_service import (
     empty_evidence, evidence_only_answer, knowledge_topic, retrieve_chat_evidence,
 )
+from app.services.general_chat_service import answer_general_question
 from app.services.local_chat_service import LocalChatError, ask_local_chatbot, local_chat_pilot_available
 from app.services.resource_service import find_missing_skills
 from app.services.student_updates_service import UpdateAudience, academic_fields, education_stage, load_audience
@@ -55,13 +58,42 @@ def get_current_db_user(firebase_user, db: Session):
     return user
 
 
+def active_career(db, career_id):
+    return (
+        db.query(Career)
+        .filter(Career.career_id == career_id, Career.status.is_(True))
+        .first()
+    )
+
+
+def save_chat_reply(db, user_id, question, reply, evidence=None):
+    message = ChatMessage(user_id=user_id, question=question, response=str(reply))
+    db.add(message)
+    db.commit()
+    db.refresh(message)
+
+    result = {
+        "message_id": str(message.message_id),
+        "question": message.question,
+        "response": message.response,
+    }
+    if mode := getattr(reply, "mode", None):
+        result["reply_mode"] = mode
+    if evidence:
+        result["sources"] = evidence["items"]
+        result["source_status"] = evidence["status"]
+        result["sources_checked_at"] = evidence["checked_at"]
+    return result
+
+
 @router.post("/ask")
 def ask_chatbot(
     request: ChatbotRequest,
     firebase_user=Depends(get_current_firebase_user),
     db: Session = Depends(get_db)
 ):
-    if not request.message or not request.message.strip():
+    question = request.message.strip()
+    if not question:
         raise HTTPException(
             status_code=400,
             detail="Message is required."
@@ -69,6 +101,24 @@ def ask_chatbot(
 
     user = get_current_db_user(firebase_user, db)
     user_id = user.user_id
+
+    selected_career = None
+    if request.career_id:
+        try:
+            career_uuid = UUID(request.career_id)
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid career_id format.") from None
+        selected_career = active_career(db, career_uuid)
+        if selected_career is None:
+            raise HTTPException(status_code=404, detail="Selected career not found.")
+
+    casual = answer_casual_chat(question)
+    standalone = ChatbotReply(casual, "casual_chat") if casual is not None else None
+    if standalone is None and (general := answer_general_question(question)) is not None:
+        standalone = ChatbotReply(general, "general_guidance")
+    if standalone is not None:
+        return save_chat_reply(db, user_id, question, standalone)
+
 
     profile = (
         db.query(StudentProfile)
@@ -88,38 +138,16 @@ def ask_chatbot(
     else:
         recommendations = recommendation_query.limit(3).all()
 
-    selected_career = None
     roadmap_stages = []
     learning_resources = []
     video_courses = []
 
-    career_uuid = None
-    if request.career_id:
-        try:
-            career_uuid = UUID(request.career_id)
-        except ValueError:
-            raise HTTPException(
-                status_code=400,
-                detail="Invalid career_id format."
-            )
-
-    elif profile is not None:
+    if selected_career is None and profile is not None:
         career_uuid = profile.selected_career_id
         if career_uuid is None and recommendations:
             career_uuid = recommendations[0].career_id
-
-    if career_uuid:
-        selected_career = (
-            db.query(Career)
-            .filter(Career.career_id == career_uuid, Career.status.is_(True))
-            .first()
-        )
-
-        if not selected_career and request.career_id:
-            raise HTTPException(
-                status_code=404,
-                detail="Selected career not found."
-            )
+        if career_uuid is not None:
+            selected_career = active_career(db, career_uuid)
 
     if selected_career:
         roadmap_stages = (
@@ -177,7 +205,7 @@ def ask_chatbot(
     pilot_requested = request.mode == "pilot"
     pilot_available = pilot_requested and local_chat_pilot_available()
     live_enabled = os.getenv("CHATBOT_LIVE_KNOWLEDGE", "").strip().lower() in {"true", "1"}
-    topic = knowledge_topic(request.message) if local_chat or live_enabled or pilot_available else None
+    topic = knowledge_topic(question) if local_chat or live_enabled or pilot_available else None
     audience = None
     if topic and live_enabled and profile is not None:
         audience = load_audience(db, user_id)
@@ -209,41 +237,22 @@ def ask_chatbot(
                 from_thread.run(retrieve_chat_evidence, topic, audience) if audience else
                 empty_evidence(topic, stage, "offline" if profile is not None else "profile_needed")
             )
-            ai_response = ChatbotReply(evidence_only_answer(evidence, request.message), "official_sources")
+            ai_response = ChatbotReply(evidence_only_answer(evidence, question), "official_sources")
+        elif (analysis := answer_profile_analysis(question, context)) is not None:
+            ai_response = ChatbotReply(analysis, "profile_analysis")
         elif pilot_requested:
-            if not pilot_available or len(request.message.strip()) > 1600:
+            if not pilot_available or len(question) > 1600:
                 raise LocalChatError("The conversation pilot is unavailable for this request.")
             answer = ask_local_chatbot(request.message, context)
             ai_response = ChatbotReply(answer, "conversation_pilot")
         else:
-            ai_response = answer_from_saved_guidance(request.message, context)
+            ai_response = answer_from_saved_guidance(question, context)
             if ai_response is None:
-                ai_response = ask_career_chatbot(user_message=request.message.strip(), context=context)
+                ai_response = ask_career_chatbot(user_message=question, context=context)
     except (ChatbotServiceError, LocalChatError):
-        ai_response = answer_from_saved_guidance(request.message, context, fallback=True)
+        ai_response = answer_from_saved_guidance(question, context, fallback=True)
 
-    chat_message = ChatMessage(
-        user_id=user_id,
-        question=request.message.strip(),
-        response=str(ai_response),
-    )
-
-    db.add(chat_message)
-    db.commit()
-    db.refresh(chat_message)
-
-    result = {
-        "message_id": str(chat_message.message_id),
-        "question": chat_message.question,
-        "response": chat_message.response,
-    }
-    if mode := getattr(ai_response, "mode", None):
-        result["reply_mode"] = mode
-    if evidence:
-        result["sources"] = evidence["items"]
-        result["source_status"] = evidence["status"]
-        result["sources_checked_at"] = evidence["checked_at"]
-    return result
+    return save_chat_reply(db, user_id, question, ai_response, evidence)
 
 
 @router.get("/history")
