@@ -1,3 +1,6 @@
+from app.services.education_stage_service import education_stage
+
+
 def safe_list(value):
     if not value:
         return []
@@ -104,51 +107,45 @@ def normalize_academic_score(profile):
 
 
 def academic_stage_status(profile, career):
-    level = str(profile.academic_level or "").lower()
+    level = education_stage(profile.academic_level)
     required = str(career.required_education or "").lower()
 
-    school_levels = ("matric", "secondary", "high school", "class 9", "middle")
-    senior_levels = ("intermediate", "senior secondary", "sixth form", "a level", "high school senior")
-    undergraduate_levels = ("bachelor", "undergraduate")
-    diploma_levels = ("diploma", "dae", "technical", "vocational", "vet", "polytechnic", "associate degree", "short-cycle")
-
-    if any(item in level for item in school_levels) and any(
-        item in required for item in ("intermediate", "bachelor", "degree", "mbbs", "master")
-    ):
+    higher_study = any(term in required for term in (
+        "bachelor", "degree", "mbbs", "master", "postgraduate",
+        "accredited architecture programme", "related study", "licensing",
+    ))
+    next_stage_training = any(term in required for term in (
+        "intermediate", "senior-secondary", "diploma", "vocational", "technical training",
+    ))
+    if level == "school" and (higher_study or next_stage_training):
         return "foundation_stage"
-    if any(item in level for item in senior_levels) and any(
-        item in required for item in ("bachelor", "degree", "mbbs", "master")
-    ):
+    if level in {"senior_secondary", "diploma"} and higher_study:
         return "foundation_stage"
-    if any(item in level for item in diploma_levels) and any(
-        item in required for item in ("bachelor", "degree", "mbbs", "master")
-    ):
-        return "foundation_stage"
-    if any(item in level for item in undergraduate_levels) and "master" in required:
+    if level == "undergraduate" and ("master" in required or "postgraduate" in required):
         return "foundation_stage"
     return "eligible"
 
 
 def stage_guidance(profile, career):
-    level = str(profile.academic_level or "").lower()
+    level = education_stage(profile.academic_level)
     country = str(getattr(profile, "country", "") or "your country")
 
-    if any(item in level for item in ("matric", "secondary", "high school", "class 9", "middle")):
+    if level == "school":
         return (
             f"At your current school stage in {country}, focus on core subjects, explore {career.field} through safe beginner projects, "
             "and choose the next senior-secondary pathway that keeps this career open."
         )
-    if any(item in level for item in ("intermediate", "senior secondary", "sixth form", "a level", "high school senior")):
+    if level == "senior_secondary":
         return (
             f"At your senior-secondary stage in {country}, strengthen admission-relevant subjects, build a small portfolio, "
             f"and research entry requirements for {career.title}."
         )
-    if any(item in level for item in ("diploma", "dae", "technical", "vocational", "polytechnic")):
+    if level == "diploma":
         return (
             f"At your technical or diploma stage in {country}, build applied evidence, complete industry-relevant projects, "
             f"and choose whether {career.title} is best reached through employment, certification, or further study."
         )
-    if "master" in level or "postgraduate" in level or "graduate" in level:
+    if level == "postgraduate":
         return (
             f"At your postgraduate stage in {country}, focus on specialisation, research or advanced projects, "
             "professional networks, and work-ready evidence."

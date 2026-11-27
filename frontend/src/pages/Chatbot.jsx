@@ -13,6 +13,8 @@ import {
   FaUserCircle,
 } from "react-icons/fa";
 import StudentLayout from "../layouts/StudentLayout";
+import StudentUpdateLink from "../components/StudentUpdateLink";
+import { formatUpdateDate } from "../components/NotificationItems";
 import { askChatbot, getChatHistory } from "../services/chatbotService";
 import "../styles/chatbot-page.css";
 
@@ -36,6 +38,11 @@ const suggestedQuestions = [
     label: "Resources",
     text: "Suggest free resources for my missing skills.",
     icon: <FaLightbulb />,
+  },
+  {
+    label: "Study options",
+    text: "Which universities or colleges should I consider at my current stage?",
+    icon: <FaBrain />,
   },
 ];
 
@@ -279,6 +286,10 @@ export default function Chatbot() {
             "I could not generate a response.",
           id: response?.message_id || `assistant-${Date.now()}`,
           createdAt: new Date().toISOString(),
+          replyMode: response?.reply_mode,
+          sources: Array.isArray(response?.sources) ? response.sources : [],
+          sourceStatus: response?.source_status,
+          sourcesCheckedAt: response?.sources_checked_at,
           responseTime: `${Math.max(
             1,
             Math.round((performance.now() - startedAt) / 1000)
@@ -385,6 +396,27 @@ export default function Chatbot() {
                     <div className="chat-content" dir="auto">
                       {renderMessageContent(message.text)}
                     </div>
+                    {message.replyMode && (
+                      <div className="chat-evidence">
+                        <p className="chat-evidence-mode">{{
+                          local_llm: "Local model",
+                          knowledge_fallback: "Saved guidance",
+                          official_sources: "Official-source lookup",
+                        }[message.replyMode]}</p>
+                        {message.sourceStatus === "stale" && <p>Some sources are showing their previous check.</p>}
+                        {message.sourcesCheckedAt && <p>Sources checked {formatUpdateDate(message.sourcesCheckedAt)}</p>}
+                        {!!message.sources?.length && (
+                          <ul>
+                            {message.sources.map((source) => (
+                              <li key={source.url}>
+                                <StudentUpdateLink url={source.url}>{source.title}</StudentUpdateLink>
+                                <span>{source.source}{source.published_at && ` · ${formatUpdateDate(source.published_at)}`}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </motion.div>
               ))}

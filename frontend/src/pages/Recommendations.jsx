@@ -41,7 +41,7 @@ import Sidebar from "../components/Sidebar";
 import NotificationBell from "../components/NotificationBell";
 import {
   generateCareerRecommendations,
-  getMyRecommendations,
+  getMyRecommendationRanking,
   getSavedCareers,
   saveCareer,
 } from "../services/recommendationService";
@@ -138,7 +138,9 @@ function Recommendations() {
   const [savedCareerIds, setSavedCareerIds] = useState([]);
   const [activeFilter, setActiveFilter] = useState("All");
   const [searchQuery, setSearchQuery] = useState("");
-  const [sortBy, setSortBy] = useState("match_score");
+  const [sortBy, setSortBy] = useState("recommended");
+  const [modelRankingAvailable, setModelRankingAvailable] = useState(false);
+  const [changingRanking, setChangingRanking] = useState(false);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [savingId, setSavingId] = useState("");
@@ -152,12 +154,14 @@ function Recommendations() {
       setError("");
 
       const [recommendationData, savedData, profileData] = await Promise.all([
-        getMyRecommendations(),
+        getMyRecommendationRanking(),
         getSavedCareers(),
         getStudentProfile().catch(() => null),
       ]);
 
-      setRecommendations(recommendationData);
+      setRecommendations(recommendationData.recommendations);
+      setModelRankingAvailable(recommendationData.modelRankingAvailable);
+      setSortBy((current) => current === "model" ? "recommended" : current);
 
       const ids = savedData
         .map((item) => item.career_id || item.career?.career_id)
@@ -165,7 +169,7 @@ function Recommendations() {
 
       setSavedCareerIds(ids);
       setProfile(profileData);
-      setSelectedCareerId(profileData?.selected_career_id || recommendationData[0]?.career_id || "");
+      setSelectedCareerId(profileData?.selected_career_id || recommendationData.recommendations[0]?.career_id || "");
     } catch (error) {
       console.error(error);
       setError(
@@ -180,6 +184,35 @@ function Recommendations() {
   useEffect(() => {
     loadRecommendations();
   }, []);
+
+  async function handleSortChange(event) {
+    const nextSort = event.target.value;
+    const useModel = nextSort === "model";
+
+    if (useModel === (sortBy === "model")) {
+      setSortBy(nextSort);
+      return;
+    }
+
+    setChangingRanking(true);
+    setError("");
+    try {
+      const result = await getMyRecommendationRanking(useModel);
+      setModelRankingAvailable(result.modelRankingAvailable);
+
+      if (useModel && result.rankingSource !== "trained") {
+        setError("The trained ranking is unavailable for these recommendations. The standard ranking is still available.");
+        return;
+      }
+
+      setRecommendations(result.recommendations);
+      setSortBy(nextSort);
+    } catch (error) {
+      setError(error.message || "The ranking could not be changed. Please try again.");
+    } finally {
+      setChangingRanking(false);
+    }
+  }
 
   const filteredRecommendations = useMemo(() => {
     let result = [...recommendations];
@@ -383,13 +416,23 @@ function Recommendations() {
             <div>
               <h1>Career Recommendations</h1>
               <p>
-                AI-generated career paths based on your academic profile,
+                Career paths based on your academic profile,
                 interests, skills, and performance.
               </p>
             </div>
 
             <div className="rec-heading-actions">
-              <select value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
+              <select
+                aria-label="Sort recommendations"
+                aria-busy={changingRanking}
+                value={sortBy}
+                onChange={handleSortChange}
+                disabled={changingRanking || generating}
+              >
+                <option value="recommended">Recommended Order</option>
+                {modelRankingAvailable && recommendations.length > 1 && (
+                  <option value="model">Preview Trained Ranking</option>
+                )}
                 <option value="match_score">Sort by Match Score</option>
                 <option value="field">Sort by Field</option>
                 <option value="difficulty">Sort by Difficulty</option>
@@ -404,18 +447,18 @@ function Recommendations() {
                 type="button"
                 className="regenerate-btn"
                 onClick={handleGenerate}
-                disabled={generating}
+                disabled={generating || changingRanking}
               >
                 <FaSyncAlt className={generating ? "spin-icon" : ""} />
                 {generating ? "Generating..." : "Generate More Careers"}
               </button>
-              <button type="button" className="report-btn" onClick={handleDownloadReport} disabled={!recommendations.length}>
+              <button type="button" className="report-btn" onClick={handleDownloadReport} disabled={!recommendations.length || changingRanking}>
                 <FaDownload /> Download Report
               </button>
             </div>
           </div>
 
-          {error && <div className="rec-error">{error}</div>}
+          {error && <div className="rec-error" role="alert">{error}</div>}
 
           {recommendations.length === 0 ? (
             <div className="rec-empty-state">
@@ -443,7 +486,7 @@ function Recommendations() {
                   <div className="rec-hero-info">
                     <span>
                       <FaMagic />
-                      Generated by AI
+                      {sortBy === "model" ? "Trained Ranking Preview" : "Profile-Based Matches"}
                     </span>
 
                     <h2>Your Best Career Matches</h2>
@@ -543,7 +586,7 @@ function Recommendations() {
                               <div className="rec-title-row">
                                 <h2>{title}</h2>
                                 <span className={`match-badge ${getBadgeClass(score)}`}>
-                                  {getBadge(index, score)}
+                                  {item.model_rank ? `Rank #${item.model_rank}` : getBadge(index, score)}
                                 </span>
                               </div>
 
@@ -557,7 +600,7 @@ function Recommendations() {
 
                           <div className="rec-score">
                             <strong>{score}%</strong>
-                            <span>Match Score</span>
+                            <span>{item.model_rank ? "Rule Match Score" : "Match Score"}</span>
                           </div>
                         </div>
 

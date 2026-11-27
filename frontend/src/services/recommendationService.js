@@ -9,8 +9,17 @@ export function normalizeRecommendations(response) {
 }
 
 export async function getMyRecommendations() {
-  const response = await get("/recommendations/me");
-  return normalizeRecommendations(response);
+  const { recommendations } = await getMyRecommendationRanking();
+  return recommendations;
+}
+
+export async function getMyRecommendationRanking(useModel = false) {
+  const response = await get(useModel ? "/recommendations/me?ranking=model" : "/recommendations/me");
+  return {
+    recommendations: normalizeRecommendations(response),
+    rankingSource: response?.ranking_source,
+    modelRankingAvailable: response?.model_ranking_available === true,
+  };
 }
 
 export async function generateCareerRecommendations() {

@@ -1,5 +1,7 @@
+import os
 from uuid import UUID
 
+from anyio import from_thread
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
@@ -15,11 +17,18 @@ from app.models.saved_career_model import SavedCareer
 from app.models.chat_model import ChatMessage
 from app.schemas.chatbot_schema import ChatbotRequest
 from app.services.chatbot_service import (
+    CHATBOT_PROVIDER,
+    ChatbotReply,
     ChatbotServiceError,
     build_chatbot_context,
     ask_career_chatbot,
 )
+from app.services.career_ranker import rank_recommendations, ranker_configured
+from app.services.chatbot_knowledge_service import (
+    empty_evidence, evidence_only_answer, knowledge_topic, retrieve_chat_evidence,
+)
 from app.services.resource_service import find_missing_skills
+from app.services.student_updates_service import UpdateAudience, academic_fields, education_stage, load_audience
 from app.utils.auth_dependency import get_current_firebase_user
 
 router = APIRouter(
@@ -55,6 +64,7 @@ def ask_chatbot(
         )
 
     user = get_current_db_user(firebase_user, db)
+    user_id = user.user_id
 
     profile = (
         db.query(StudentProfile)
@@ -62,19 +72,24 @@ def ask_chatbot(
         .first()
     )
 
-    recommendations = (
+    recommendation_query = (
         db.query(Recommendation)
         .filter(Recommendation.user_id == user.user_id)
         .order_by(Recommendation.match_score.desc())
-        .limit(3)
-        .all()
     )
+    local_chat = CHATBOT_PROVIDER == "local"
+    if local_chat and ranker_configured() and profile is not None:
+        ranked, _ = rank_recommendations(profile, recommendation_query.all())
+        recommendations = ranked[:3]
+    else:
+        recommendations = recommendation_query.limit(3).all()
 
     selected_career = None
     roadmap_stages = []
     learning_resources = []
     video_courses = []
 
+    career_uuid = None
     if request.career_id:
         try:
             career_uuid = UUID(request.career_id)
@@ -84,18 +99,25 @@ def ask_chatbot(
                 detail="Invalid career_id format."
             )
 
+    elif local_chat and profile is not None:
+        career_uuid = profile.selected_career_id
+        if career_uuid is None and recommendations:
+            career_uuid = recommendations[0].career_id
+
+    if career_uuid:
         selected_career = (
             db.query(Career)
-            .filter(Career.career_id == career_uuid)
+            .filter(Career.career_id == career_uuid, Career.status.is_(True))
             .first()
         )
 
-        if not selected_career:
+        if not selected_career and request.career_id:
             raise HTTPException(
                 status_code=404,
                 detail="Selected career not found."
             )
 
+    if selected_career:
         roadmap_stages = (
             db.query(RoadmapStage)
             .filter(
@@ -159,6 +181,20 @@ def ask_chatbot(
         .all()
     )
 
+    evidence = None
+    live_enabled = os.getenv("CHATBOT_LIVE_KNOWLEDGE", "").strip().lower() in {"true", "1"}
+    topic = knowledge_topic(request.message) if local_chat or live_enabled else None
+    if topic:
+        if live_enabled and profile is not None:
+            audience = load_audience(db, user_id)
+            if selected_career:
+                fields = tuple(dict.fromkeys([*academic_fields(selected_career.field), *audience.fields]))[:3]
+                audience = UpdateAudience(audience.stage, audience.country, fields)
+            evidence = from_thread.run(retrieve_chat_evidence, topic, audience)
+        else:
+            stage = education_stage(profile.academic_level) if profile is not None else "exploring"
+            evidence = empty_evidence(topic, stage, "offline" if profile is not None else "profile_needed")
+
     context = build_chatbot_context(
         user=user,
         profile=profile,
@@ -169,13 +205,18 @@ def ask_chatbot(
         video_courses=video_courses,
         saved_careers=saved_careers,
         chat_history=list(reversed(chat_history)),
+        live_evidence=evidence,
     )
 
+    if local_chat:
+        # Native inference can take seconds. Return the read connection to the pool.
+        db.rollback()
+
     try:
-        ai_response = ask_career_chatbot(
-            user_message=request.message.strip(),
-            context=context
-        )
+        if evidence:
+            ai_response = ChatbotReply(evidence_only_answer(evidence), "official_sources")
+        else:
+            ai_response = ask_career_chatbot(user_message=request.message.strip(), context=context)
     except ChatbotServiceError as error:
         raise HTTPException(
             status_code=error.status_code,
@@ -183,20 +224,27 @@ def ask_chatbot(
         ) from error
 
     chat_message = ChatMessage(
-        user_id=user.user_id,
+        user_id=user_id,
         question=request.message.strip(),
-        response=ai_response,
+        response=str(ai_response),
     )
 
     db.add(chat_message)
     db.commit()
     db.refresh(chat_message)
 
-    return {
+    result = {
         "message_id": str(chat_message.message_id),
         "question": chat_message.question,
         "response": chat_message.response,
     }
+    if mode := getattr(ai_response, "mode", None):
+        result["reply_mode"] = mode
+    if evidence:
+        result["sources"] = evidence["items"]
+        result["source_status"] = evidence["status"]
+        result["sources_checked_at"] = evidence["checked_at"]
+    return result
 
 
 @router.get("/history")

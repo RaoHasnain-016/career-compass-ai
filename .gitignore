@@ -25,3 +25,10 @@ frontend/.env.local
 !.env.example
 database/backups/
 *.dump
+
+# Local training tools, heavyweight model files and generated artifacts
+backend/.ml-tools/
+backend/.llm-tools/
+backend/.local-models/
+backend/ml/artifacts/
+*.gguf

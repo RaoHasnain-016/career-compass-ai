@@ -1,11 +1,14 @@
+from typing import Literal
+
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from app.database import get_db
 from app.models.user_model import User
 from app.models.profile_model import StudentProfile
 from app.models.career_model import Career
 from app.models.recommendation_model import Recommendation
+from app.services.career_ranker import rank_recommendations, ranker_configured
 from app.services.recommendation_service import generate_recommendation_analysis
 from app.services.student_updates_service import record_student_update
 from app.utils.auth_dependency import get_current_firebase_user
@@ -62,10 +65,27 @@ def recommendation_to_dict(recommendation: Recommendation):
     }
 
 
+def ranked_payload(recommendations, profile, ranking):
+    model_available = ranker_configured()
+    ordered, source = recommendations, "rules"
+    if ranking == "model" and model_available:
+        ordered, source = rank_recommendations(profile, recommendations)
+    rows = [recommendation_to_dict(item) for item in ordered]
+    if source == "trained":
+        for rank, row in enumerate(rows, 1):
+            row["model_rank"] = rank
+    return {
+        "ranking_source": source,
+        "model_ranking_available": model_available,
+        "recommendations": rows,
+    }
+
+
 @router.post("/generate")
 def generate_recommendations(
     firebase_user=Depends(get_current_firebase_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    ranking: Literal["rules", "model"] = "rules",
 ):
     user = get_current_db_user(firebase_user, db)
 
@@ -139,30 +159,27 @@ def generate_recommendations(
     return {
         "message": "Recommendations generated successfully",
         "total_careers_analyzed": len(careers),
-        "recommendations": [
-            recommendation_to_dict(recommendation)
-            for recommendation in generated_recommendations
-        ]
+        **ranked_payload(generated_recommendations, profile, ranking),
     }
 
 
 @router.get("/me")
 def get_my_recommendations(
     firebase_user=Depends(get_current_firebase_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    ranking: Literal["rules", "model"] = "rules",
 ):
     user = get_current_db_user(firebase_user, db)
 
     recommendations = (
         db.query(Recommendation)
+        .options(joinedload(Recommendation.career))
         .filter(Recommendation.user_id == user.user_id)
         .order_by(Recommendation.match_score.desc())
         .all()
     )
 
-    return {
-        "recommendations": [
-            recommendation_to_dict(recommendation)
-            for recommendation in recommendations
-        ]
-    }
+    profile = None
+    if recommendations and ranking == "model" and ranker_configured():
+        profile = db.query(StudentProfile).filter(StudentProfile.user_id == user.user_id).first()
+    return ranked_payload(recommendations, profile, ranking)

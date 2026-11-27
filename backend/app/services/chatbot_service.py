@@ -5,8 +5,11 @@ import re
 from dotenv import load_dotenv
 from openai import APIConnectionError, APIStatusError, APITimeoutError, OpenAI
 
+from app.services.local_chat_service import ask_local_chatbot, build_local_knowledge_fallback
+
 load_dotenv()
 
+CHATBOT_PROVIDER = os.getenv("CHATBOT_PROVIDER", "openrouter").strip().lower()
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
 OPENROUTER_MODEL = os.getenv("OPENROUTER_MODEL", "meta-llama/llama-3.3-70b-instruct:free")
 # A named free model gives the chatbot consistent quality.  The free router is
@@ -29,7 +32,7 @@ client = OpenAI(
     base_url=OPENROUTER_BASE_URL,
     api_key=OPENROUTER_API_KEY,
     max_retries=0,
-) if OPENROUTER_API_KEY else None
+) if CHATBOT_PROVIDER == "openrouter" and OPENROUTER_API_KEY else None
 
 
 class ChatbotServiceError(Exception):
@@ -37,6 +40,15 @@ class ChatbotServiceError(Exception):
         super().__init__(detail)
         self.detail = detail
         self.status_code = status_code
+
+
+class ChatbotReply(str):
+    """Provide response provenance while remaining compatible with chat history."""
+
+    def __new__(cls, text: str, mode: str):
+        reply = super().__new__(cls, text)
+        reply.mode = mode
+        return reply
 
 
 def safe(value):
@@ -62,6 +74,7 @@ def build_chatbot_context(
     video_courses=None,
     saved_careers=None,
     chat_history=None,
+    live_evidence=None,
 ):
     """Keep the request focused on bounded student data and recent conversation."""
     def brief(value, limit=180):
@@ -76,7 +89,7 @@ def build_chatbot_context(
 
     context = {
         "profile": fields(profile, (
-            "academic_level", "class_degree", "marks_cgpa", "favorite_subjects",
+            "academic_level", "class_degree", "country", "marks_cgpa", "favorite_subjects",
             "weak_subjects", "interests", "skills", "study_preference",
         )) if profile else None,
         "selected_career": fields(selected_career, (
@@ -127,6 +140,8 @@ def build_chatbot_context(
             for msg in (chat_history or [])[-3:]
         ],
     }
+    if live_evidence is not None:
+        context["live_evidence"] = live_evidence
     return json.dumps(context, ensure_ascii=False, separators=(",", ":"))
 
 
@@ -164,6 +179,17 @@ def build_resilient_career_reply(user_message: str, context: str) -> str:
 
 
 def ask_career_chatbot(user_message: str, context: str):
+    if CHATBOT_PROVIDER == "local":
+        try:
+            answer = ask_local_chatbot(user_message, context)
+            return ChatbotReply(answer, "local_llm")
+        except Exception as error:
+            logger.warning("Local chatbot did not generate an answer: type=%s", type(error).__name__)
+            return ChatbotReply(build_local_knowledge_fallback(user_message, context), "knowledge_fallback")
+
+    if CHATBOT_PROVIDER != "openrouter":
+        raise ChatbotServiceError("The AI assistant has an unsupported provider configuration.")
+
     if not OPENROUTER_API_KEY or OPENROUTER_API_KEY == "YOUR_OPENROUTER_API_KEY":
         raise ChatbotServiceError(
             "The AI assistant is not configured yet. Please contact the administrator."

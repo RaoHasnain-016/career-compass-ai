@@ -7,6 +7,7 @@ from sqlalchemy.dialects.postgresql import insert as postgres_insert
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 
 from app.models import Career, Recommendation, SavedCareer, StudentProfile, StudentUpdate, StudentUpdateRead
+from app.services.education_stage_service import education_stage
 
 
 INBOX_LIMIT = 40
@@ -59,21 +60,6 @@ class UpdateAudience:
     stage: str = "exploring"
     country: str = ""
     fields: tuple[str, ...] = ()
-
-
-def education_stage(level):
-    level = str(level or "").casefold()
-    if re.search(r"\b(diploma|dae|technical|vocational|vet|polytechnic|associate degree|short.cycle|post.secondary)\b", level):
-        return "diploma"
-    if re.search(r"\b(intermediate|senior secondary|upper secondary|sixth form|a.level|high school senior|class (11|12)|hssc)\b", level):
-        return "senior_secondary"
-    if re.search(r"\b(matric|secondary|gcse|class 9|class 10|middle|high school|ssc)\b", level):
-        return "school"
-    if re.search(r"\b(bachelor\w*|undergraduate)\b", level):
-        return "undergraduate"
-    if re.search(r"\b(master\w*|graduate|postgraduate|doctoral|phd)\b", level):
-        return "postgraduate"
-    return "exploring"
 
 
 def academic_fields(value):

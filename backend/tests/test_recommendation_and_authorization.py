@@ -73,6 +73,17 @@ class RecommendationScoringTests(unittest.TestCase):
         self.assertEqual(score, 8.0)
         self.assertEqual(status, "foundation_stage")
 
+    def test_matric_student_sees_training_requirements_before_professional_paths(self):
+        profile = self.profile(academic_level="Matric", marks_cgpa=90)
+        for requirement in (
+            "Electrical diploma, DAE, or vocational certificate",
+            "An accredited architecture programme and local licensing",
+        ):
+            with self.subTest(requirement=requirement):
+                analysis = generate_recommendation_analysis(profile, self.career(required_education=requirement))
+                self.assertEqual(analysis["eligibility_status"], "foundation_stage")
+                self.assertIn("next senior-secondary pathway", analysis["explanation"])
+
     def test_empty_career_requirements_do_not_create_a_match(self):
         percentage, matched, missing = calculate_percentage_match(["Python"], [])
 

@@ -241,6 +241,22 @@
   gap: 10px;
 }
 
+.chat-evidence {
+  margin-top: 12px;
+  padding-top: 8px;
+  border-top: 1px solid #dbe5ef;
+  color: #475569;
+  font-size: .78rem;
+  overflow-wrap: anywhere;
+}
+
+.chat-evidence p { margin: 3px 0; }
+.chat-evidence .chat-evidence-mode { color: #164d80; font-weight: 700; }
+.chat-evidence ul { margin: 6px 0 0; padding-inline-start: 18px; }
+.chat-evidence li { margin-top: 7px; }
+.chat-evidence li span { display: block; }
+.chat-evidence a { color: #0b5caa; }
+
 .chat-content h3 {
   margin: 2px 0 0;
   color: #0f172a;
