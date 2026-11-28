@@ -24,6 +24,11 @@
   color: var(--dash-text);
 }
 
+.dashboard-page.student-shell,
+.dashboard-main.student-main {
+  padding: 0;
+}
+
 .dashboard-sidebar {
   position: fixed;
   inset: 0 auto 0 0;
@@ -153,11 +158,13 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 12px;
   z-index: 30;
 }
 
 .dashboard-search {
   width: min(480px, 100%);
+  min-width: 0;
   height: 42px;
   border-radius: 999px;
   background: #eef3f8;
@@ -170,6 +177,7 @@
 
 .dashboard-search input {
   width: 100%;
+  min-width: 0;
   border: 0;
   background: transparent;
   outline: none;
@@ -197,6 +205,10 @@
   object-fit: cover;
   border-radius: 50%;
   border: 3px solid #dbeafe;
+}
+
+.dashboard-user-area span {
+  overflow-wrap: anywhere;
 }
 
 .dashboard-content {
@@ -299,7 +311,7 @@
 
 .summary-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 22px;
   margin: 34px 0;
 }
@@ -390,7 +402,7 @@
 .analytics-grid,
 .lower-grid {
   display: grid;
-  grid-template-columns: 2fr 1fr;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
   gap: 24px;
   margin-bottom: 28px;
 }
@@ -758,7 +770,7 @@
 @media (max-width: 1200px) {
   .summary-grid,
   .resource-grid {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .analytics-grid,
@@ -818,17 +830,22 @@
   .dashboard-nav a { flex: 0 0 auto; width: auto; padding: 9px 11px; font-size: 0.82rem; }
   .dashboard-pro-card, .logout-btn { display: none; }
   .dashboard-topbar { height: 58px; }
-  .dashboard-user-area { gap: 10px; }
+  .dashboard-user-area { gap: 10px; margin-inline-start: auto; }
   .dashboard-user-area img { width: 36px; height: 36px; }
   .dashboard-content { padding: 18px 14px 88px; }
   .dashboard-hero h1 { font-size: 1.7rem; }
   .summary-card, .chart-card, .ai-insight-card, .roadmap-card, .activity-card { border-radius: 20px; }
-  .summary-card { min-height: 170px; }
-  .chart-card { padding: 18px 10px; overflow: hidden; }
+  .summary-grid { gap: 12px; margin-block: 22px; }
+  .summary-card { padding: 12px; min-height: 130px; }
+  .summary-top { gap: 5px; margin-bottom: 10px; }
+  .summary-top .icon { width: 32px; height: 32px; flex-shrink: 0; }
+  .summary-top small { font-size: 0.7rem; text-align: end; }
+  .summary-card p { font-size: 0.85rem; }
+  .summary-card h2 { font-size: 1.45rem; }
+  .chart-card { padding: 18px 10px; min-width: 0; }
 
-  .summary-grid,
   .resource-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .dashboard-search {

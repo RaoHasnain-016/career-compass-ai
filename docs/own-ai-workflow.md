@@ -58,9 +58,13 @@ The backend runs the local model without OpenRouter. Its answer modes distinguis
 
 The chat's suggested career, skill-gap, roadmap, resource and video questions use Career Compass records directly. Those replies carry the **Career Compass guidance** label and require no model API call. The student can use the same selected career across the roadmap, learning resources and career news.
 
+The chatbot's **Knowledge base** mode answers selected questions about CVs, interviews, and vocational and qualification pathways with links to the original public guidance. These reference answers use English, Urdu or Roman Urdu and work without a model API. Current admissions, deadline and news queries continue through the official-source lookup.
+
 ## 5. Improve the models with reviewed evidence
 
 Keep verified source updates separate from training. Add corrections and adviser-reviewed relevance labels to a new dataset version, retrain offline, compare on held-out profiles, and version the model artifact. The model does not treat student messages as training data or update its weights automatically. A future LoRA adapter can improve language or response style after you curate and evaluate a separate career Q&A dataset.
+
+Students can rate matches **Helpful** or **Less relevant** on Recommendations and clear a rating by selecting it again. **Personalized Order** uses those ratings and saved careers to adjust ordering for that student. It preserves education eligibility and rule match scores. The trained pilot remains available separately for comparison.
 
 ### Run the conversational training pilot
 

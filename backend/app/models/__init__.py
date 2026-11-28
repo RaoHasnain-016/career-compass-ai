@@ -1,7 +1,7 @@
 from app.models.user_model import User
 from app.models.profile_model import StudentProfile
 from app.models.career_model import Career
-from app.models.recommendation_model import Recommendation
+from app.models.recommendation_model import Recommendation, RecommendationFeedback
 from app.models.roadmap_model import RoadmapStage
 from app.models.resource_model import LearningResource
 from app.models.saved_career_model import SavedCareer

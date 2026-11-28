@@ -214,12 +214,7 @@ function Signup() {
   return (
     <div className="signup-page">
       <div className="signup-shell">
-        <motion.div
-          className="signup-left"
-          initial={{ opacity: 0, x: -35 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.65 }}
-        >
+        <div className="signup-left">
           <Link to="/" className="signup-brand">
             <span className="signup-brand-icon">
               <FaCompass />
@@ -362,14 +357,9 @@ function Signup() {
               </p>
             </motion.div>
           </div>
-        </motion.div>
+        </div>
 
-        <motion.div
-          className="signup-right"
-          initial={{ opacity: 0, x: 35 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.7 }}
-        >
+        <div className="signup-right">
           <div className="signup-right-overlay"></div>
           <div className="signup-glow signup-glow-one"></div>
           <div className="signup-glow signup-glow-two"></div>
@@ -403,7 +393,7 @@ function Signup() {
               </ul>
             </motion.div>
           </div>
-        </motion.div>
+        </div>
       </div>
     </div>
   );

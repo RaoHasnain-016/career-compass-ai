@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import {
@@ -73,6 +73,7 @@ const replyModeLabels = {
   casual_chat: "Conversation",
   profile_analysis: "Profile analysis",
   general_guidance: "Quick answer",
+  knowledge_base: "Knowledge base",
   local_llm: "Local model",
   conversation_pilot: "Conversational pilot",
   knowledge_fallback: "Saved guidance",
@@ -248,7 +249,8 @@ export default function Chatbot() {
   const location = useLocation();
   const careerId = location.state?.careerId || "";
   const careerTitle = location.state?.careerTitle || "";
-  const bottomRef = useRef(null);
+  const historyRef = useRef(null);
+  const followLatest = useRef(true);
 
   const [messages, setMessages] = useState([
     {
@@ -264,7 +266,6 @@ export default function Chatbot() {
   const [pilotAvailable, setPilotAvailable] = useState(false);
   const [usePilot, setUsePilot] = useState(false);
   const [sending, setSending] = useState(false);
-  const [error, setError] = useState("");
 
   useEffect(() => {
     let active = true;
@@ -290,9 +291,23 @@ export default function Chatbot() {
     };
   }, []);
 
+  useLayoutEffect(() => {
+    const history = historyRef.current;
+    if (history && followLatest.current) {
+      history.scrollTop = history.scrollHeight;
+    }
+  }, [loadingHistory, messages, sending]);
+
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, sending]);
+    const history = historyRef.current;
+    if (!history || typeof ResizeObserver === "undefined") return;
+
+    const observer = new ResizeObserver(() => {
+      if (followLatest.current) history.scrollTop = history.scrollHeight;
+    });
+    observer.observe(history);
+    return () => observer.disconnect();
+  }, []);
 
   const sendMessage = async (text = input) => {
     const trimmed = text.trim();
@@ -306,10 +321,10 @@ export default function Chatbot() {
       createdAt: new Date().toISOString(),
     };
 
+    followLatest.current = true;
     setMessages((prev) => [...prev, userMessage]);
     setInput("");
     setSending(true);
-    setError("");
 
     try {
       const response = await askChatbot(trimmed, { careerId, pilot: pilotAvailable && usePilot });
@@ -336,13 +351,13 @@ export default function Chatbot() {
     } catch (error) {
       console.error(error);
       const errorMessage = error.message || "AI response could not be loaded. Please try again.";
-      setError(errorMessage);
       setInput((current) => current || trimmed);
       setMessages((prev) => [
         ...prev,
         {
           role: "assistant",
           text: errorMessage,
+          failed: true,
           id: `assistant-error-${Date.now()}`,
           createdAt: new Date().toISOString(),
         },
@@ -390,11 +405,19 @@ export default function Chatbot() {
         </div>
       </header>
 
-      {error && <div className="chat-error">{error}</div>}
-
       <div className="chat-layout">
         <section className="chat-panel">
-          <div className="chat-history">
+          <div
+            className="chat-history"
+            ref={historyRef}
+            role="region"
+            aria-label="Chat messages"
+            tabIndex={0}
+            onScroll={(event) => {
+              const { scrollHeight, scrollTop, clientHeight } = event.currentTarget;
+              followLatest.current = scrollHeight - scrollTop - clientHeight <= 32;
+            }}
+          >
             {loadingHistory && (
               <div className="chat-system-note">
                 <FaClock />
@@ -420,7 +443,10 @@ export default function Chatbot() {
                     {message.role === "user" ? <FaUserCircle /> : <FaRobot />}
                   </span>
 
-                  <div className="chat-bubble">
+                  <div
+                    className={message.failed ? "chat-bubble chat-error" : "chat-bubble"}
+                    role={message.failed ? "alert" : undefined}
+                  >
                     <div className="chat-meta">
                       <strong>
                         {message.role === "user" ? "You" : "Career Compass AI"}
@@ -479,7 +505,6 @@ export default function Chatbot() {
                 </div>
               </motion.div>
             )}
-            <div ref={bottomRef}></div>
           </div>
 
           <form
@@ -502,6 +527,8 @@ export default function Chatbot() {
             )}
             <textarea
               dir="auto"
+              aria-label="Your message"
+              enterKeyHint="send"
               value={input}
               onChange={(event) => setInput(event.target.value)}
               placeholder="Say hi or ask a question…"
@@ -519,7 +546,7 @@ export default function Chatbot() {
                 }
               }}
             />
-            <button type="submit" disabled={loadingHistory || sending || !input.trim()} title="Send message">
+            <button type="submit" disabled={loadingHistory || sending || !input.trim()} aria-label="Send message">
               <FaPaperPlane />
             </button>
           </form>

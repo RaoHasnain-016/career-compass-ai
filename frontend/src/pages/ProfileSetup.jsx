@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -174,6 +174,7 @@ function ProfileSetup() {
   const navigate = useNavigate();
 
   const [step, setStep] = useState(1);
+  const stepNavigation = useRef(null);
   const [highestStep, setHighestStep] = useState(1);
   const [form, setForm] = useState(initialForm);
   const [customSkill, setCustomSkill] = useState("");
@@ -558,6 +559,20 @@ function ProfileSetup() {
     setError("");
   };
 
+  useEffect(() => {
+    const nav = stepNavigation.current;
+    const activeStep = nav?.querySelector('[aria-current="step"]');
+    if (!activeStep || nav.scrollWidth <= nav.clientWidth) return;
+
+    const viewport = nav.getBoundingClientRect();
+    const active = activeStep.getBoundingClientRect();
+    if (active.left < viewport.left) {
+      nav.scrollLeft -= viewport.left - active.left;
+    } else if (active.right > viewport.right) {
+      nav.scrollLeft += active.right - viewport.right;
+    }
+  }, [step, loadingProfile]);
+
   if (loadingProfile) {
     return (
       <div className="profile-setup-loading">
@@ -580,7 +595,7 @@ function ProfileSetup() {
           </div>
         </Link>
 
-        <nav className="setup-steps">
+        <nav className="setup-steps" aria-label="Profile setup steps" ref={stepNavigation}>
           {steps.map((item) => {
             const isActive = item.id === step;
             const isDone = item.id < step || highestStep > item.id;
@@ -590,6 +605,7 @@ function ProfileSetup() {
               <button
                 type="button"
                 key={item.id}
+                aria-current={isActive ? "step" : undefined}
                 className={[
                   "setup-step",
                   isActive ? "active" : "",

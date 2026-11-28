@@ -1,5 +1,12 @@
-from typing import List, Optional
+from typing import List, Literal, Optional
 from pydantic import BaseModel
+
+
+FeedbackValue = Literal["helpful", "less_relevant"]
+
+
+class RecommendationFeedbackRequest(BaseModel):
+    feedback: FeedbackValue | None
 
 
 class RecommendationCareerResponse(BaseModel):
@@ -28,6 +35,7 @@ class RecommendationCareerResponse(BaseModel):
 
     explanation: Optional[str] = None
     improvement_advice: Optional[str] = None
+    feedback: FeedbackValue | None = None
 
 
 class RecommendationListResponse(BaseModel):

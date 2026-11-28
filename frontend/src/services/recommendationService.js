@@ -1,4 +1,4 @@
-import { get, post } from "./api";
+import { get, post, put } from "./api";
 
 export function normalizeRecommendations(response) {
   if (!response) return [];
@@ -25,6 +25,10 @@ export async function getMyRecommendationRanking(ranking = "rules") {
 
 export async function generateCareerRecommendations() {
   return post("/recommendations/generate");
+}
+
+export async function updateRecommendationFeedback(careerId, feedback) {
+  return put(`/recommendations/${encodeURIComponent(careerId)}/feedback`, { feedback });
 }
 
 export async function getCareer(careerId) {

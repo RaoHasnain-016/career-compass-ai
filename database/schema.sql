@@ -50,6 +50,14 @@ CREATE TABLE recommendations (
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE recommendation_feedback (
+  user_id UUID NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+  career_id UUID NOT NULL REFERENCES careers(career_id) ON DELETE CASCADE,
+  feedback VARCHAR(20) NOT NULL,
+  PRIMARY KEY (user_id, career_id),
+  CONSTRAINT ck_recommendation_feedback_value CHECK (feedback IN ('helpful', 'less_relevant'))
+);
+
 CREATE TABLE roadmap_stages (
   stage_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   career_id UUID REFERENCES careers(career_id),

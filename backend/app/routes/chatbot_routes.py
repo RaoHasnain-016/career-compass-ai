@@ -18,6 +18,7 @@ from app.models.saved_career_model import SavedCareer
 from app.models.chat_model import ChatMessage
 from app.schemas.chatbot_schema import ChatbotRequest
 from app.services.casual_chat_service import answer_casual_chat
+from app.services.career_knowledge_base import answer_from_knowledge_base
 from app.services.chatbot_analysis_service import answer_profile_analysis
 from app.services.chatbot_service import (
     CHATBOT_PROVIDER,
@@ -113,11 +114,13 @@ def ask_chatbot(
             raise HTTPException(status_code=404, detail="Selected career not found.")
 
     casual = answer_casual_chat(question)
-    standalone = ChatbotReply(casual, "casual_chat") if casual is not None else None
-    if standalone is None and (general := answer_general_question(question)) is not None:
-        standalone = ChatbotReply(general, "general_guidance")
-    if standalone is not None:
-        return save_chat_reply(db, user_id, question, standalone)
+    if casual is not None:
+        return save_chat_reply(db, user_id, question, ChatbotReply(casual, "casual_chat"))
+    if reference := answer_from_knowledge_base(question):
+        reply, evidence = reference
+        return save_chat_reply(db, user_id, question, ChatbotReply(reply, "knowledge_base"), evidence)
+    if (general := answer_general_question(question)) is not None:
+        return save_chat_reply(db, user_id, question, ChatbotReply(general, "general_guidance"))
 
 
     profile = (

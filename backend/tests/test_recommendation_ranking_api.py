@@ -2,7 +2,7 @@
 
 import os
 import unittest
-from unittest.mock import Mock, patch
+from unittest.mock import Mock, call, patch
 from uuid import uuid4
 
 import firebase_admin
@@ -38,10 +38,14 @@ class RecommendationRankingApiTests(unittest.TestCase):
         preferences = Mock()
         self.preference_filter = preferences.select_from.return_value.join.return_value.filter
         self.preference_filter.return_value.all.return_value = []
+        feedback = Mock()
+        self.feedback_filter = feedback.filter
+        self.feedback_filter.return_value.all.return_value = []
         queries = {
             (routes.Recommendation,): recommendations,
             (routes.StudentProfile,): profile,
             (routes.SavedCareer.career_id, routes.Career.field): preferences,
+            (routes.RecommendationFeedback.career_id, routes.RecommendationFeedback.feedback): feedback,
         }
         self.db.query.side_effect = lambda *entities: queries[entities]
 
@@ -63,7 +67,10 @@ class RecommendationRankingApiTests(unittest.TestCase):
         self.assertEqual([row["match_score"] for row in payload["recommendations"]], [70.5, 55])
         self.assertTrue(all("model_rank" not in row for row in payload["recommendations"]))
         self.model.assert_not_called()
-        self.db.query.assert_called_once_with(routes.Recommendation)
+        self.assertEqual(self.db.query.call_args_list, [
+            call(routes.Recommendation),
+            call(routes.RecommendationFeedback.career_id, routes.RecommendationFeedback.feedback),
+        ])
 
     def test_opt_in_preserves_scores_and_adds_model_rank(self):
         self.model.return_value = (list(reversed(self.rows)), "trained")
@@ -122,4 +129,46 @@ class RecommendationRankingApiTests(unittest.TestCase):
         self.assertEqual(payload["ranking_source"], "personalized")
         self.assertEqual([row["match_score"] for row in payload["recommendations"]], [55, 70.5])
         self.assertEqual(payload["recommendations"][0]["personalization_reason"], "saved_field")
+        self.assertNotIn("personalization_reason", payload["recommendations"][1])
+
+    def test_feedback_adapts_only_personalized_order_and_keeps_rule_evidence(self):
+        self.rows[1].match_score = 66
+        self.feedback_filter.return_value.all.return_value = [(self.rows[1].career_id, "helpful")]
+        standard = self.client.get("/recommendations/me").json()
+        self.assertEqual([row["match_score"] for row in standard["recommendations"]], [70.5, 66])
+        self.assertEqual([row["feedback"] for row in standard["recommendations"]], [None, "helpful"])
+        self.assertEqual(standard["ranking_source"], "rules")
+        self.model.return_value = (self.rows, "trained")
+        trained = self.client.get("/recommendations/me?ranking=model").json()
+        self.assertEqual(trained["ranking_source"], "trained")
+        self.assertEqual([row["feedback"] for row in trained["recommendations"]], [None, "helpful"])
+
+        personalized = self.client.get("/recommendations/me?ranking=personalized").json()
+        self.assertEqual(personalized["ranking_source"], "personalized")
+        self.assertEqual([row["match_score"] for row in personalized["recommendations"]], [66, 70.5])
+        self.assertEqual(
+            [row["personalization_reason"] for row in personalized["recommendations"]],
+            ["feedback_helpful", "feedback_field_helpful"],
+        )
+        self.assertTrue(self.feedback_filter.call_args.args[0].compare(
+            routes.RecommendationFeedback.user_id == self.user_id,
+        ))
+
+    def test_feedback_respects_eligibility_and_direct_rating_over_bookmark(self):
+        primary, alternative = self.rows
+        alternative.match_score = 68
+        self.preference_filter.return_value.all.return_value = [(primary.career_id, "Technology")]
+        self.feedback_filter.return_value.all.return_value = [(primary.career_id, "less_relevant")]
+        payload = self.client.get("/recommendations/me?ranking=personalized").json()
+        self.assertEqual([row["match_score"] for row in payload["recommendations"]], [68, 70.5])
+        self.assertEqual(
+            [row["personalization_reason"] for row in payload["recommendations"]],
+            ["feedback_field_less_relevant", "feedback_less_relevant"],
+        )
+
+        alternative.eligibility_status = "foundation_stage"
+        self.feedback_filter.return_value.all.return_value = [(alternative.career_id, "helpful")]
+        payload = self.client.get("/recommendations/me?ranking=personalized").json()
+        self.assertEqual([row["match_score"] for row in payload["recommendations"]], [70.5, 68])
+        self.assertEqual(payload["recommendations"][1]["feedback"], "helpful")
         self.assertNotIn("personalization_reason", payload["recommendations"][1])

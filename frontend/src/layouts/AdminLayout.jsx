@@ -1,2 +1,27 @@
-import { Link } from "react-router-dom";
-export default function AdminLayout({children}){return <div className="sidebar-layout"><aside className="sidebar"><div className="logo" style={{color:"white",marginBottom:24}}>Admin Panel</div><Link to="/admin">Dashboard</Link><Link to="/admin/users">Manage Users</Link><Link to="/admin/careers">Manage Careers</Link><Link to="/admin/roadmaps">Manage Roadmaps</Link><Link to="/admin/resources">Manage Resources</Link><Link to="/admin/reports">Reports</Link><Link to="/dashboard">Student App</Link></aside><main className="page">{children}</main></div>}
+import { NavLink } from "react-router-dom";
+
+const adminLinks = [
+  ["/admin", "Dashboard"],
+  ["/admin/users", "Manage Users"],
+  ["/admin/careers", "Manage Careers"],
+  ["/admin/roadmaps", "Manage Roadmaps"],
+  ["/admin/resources", "Manage Resources"],
+  ["/admin/reports", "Reports"],
+  ["/dashboard", "Student App"],
+];
+
+export default function AdminLayout({ children }) {
+  return (
+    <div className="sidebar-layout">
+      <aside className="sidebar">
+        <div className="logo">Admin Panel</div>
+        <nav aria-label="Admin navigation">
+          {adminLinks.map(([to, name]) => (
+            <NavLink key={to} to={to} end>{name}</NavLink>
+          ))}
+        </nav>
+      </aside>
+      <main className="page">{children}</main>
+    </div>
+  );
+}

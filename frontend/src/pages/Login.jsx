@@ -155,12 +155,7 @@ function Login() {
   return (
     <div className="login-page">
       <div className="login-shell">
-        <motion.div
-          className="login-left"
-          initial={{ opacity: 0, x: -35 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.65 }}
-        >
+        <div className="login-left">
           <Link to="/" className="login-brand">
             <span className="brand-icon">
               <FaCompass />
@@ -258,14 +253,9 @@ function Login() {
               Don&apos;t have an account? <Link to="/signup">Sign up</Link>
             </p>
           </div>
-        </motion.div>
+        </div>
 
-        <motion.div
-          className="login-right"
-          initial={{ opacity: 0, x: 35 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.7 }}
-        >
+        <div className="login-right">
           <div className="login-right-overlay"></div>
 
           <div className="login-glow login-glow-one"></div>
@@ -311,7 +301,7 @@ function Login() {
               </ul>
             </motion.div>
           </div>
-        </motion.div>
+        </div>
       </div>
     </div>
   );

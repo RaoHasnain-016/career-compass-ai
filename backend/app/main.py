@@ -15,6 +15,7 @@ from app.models import (
     StudentProfile,
     Career,
     Recommendation,
+    RecommendationFeedback,
     RoadmapStage,
     LearningResource,
     SavedCareer,
@@ -92,6 +93,7 @@ def apply_startup_schema_patches():
         )
         StudentUpdate.__table__.create(connection, checkfirst=True)
         StudentUpdateRead.__table__.create(connection, checkfirst=True)
+        RecommendationFeedback.__table__.create(connection, checkfirst=True)
 
 
 # CORS setup for React/Vite frontend

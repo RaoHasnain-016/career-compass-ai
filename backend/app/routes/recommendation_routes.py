@@ -1,14 +1,18 @@
 from typing import Literal
+from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.dialects.postgresql import insert as postgres_insert
+from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.orm import Session, joinedload
 
 from app.database import get_db
 from app.models.user_model import User
 from app.models.profile_model import StudentProfile
 from app.models.career_model import Career
-from app.models.recommendation_model import Recommendation
+from app.models.recommendation_model import Recommendation, RecommendationFeedback
 from app.models.saved_career_model import SavedCareer
+from app.schemas.recommendation_schema import RecommendationFeedbackRequest
 from app.services.career_ranker import personalize_recommendations, rank_recommendations, ranker_configured
 from app.services.recommendation_service import generate_recommendation_analysis
 from app.services.student_updates_service import record_student_update
@@ -78,18 +82,30 @@ def get_saved_ranking_preferences(db, user_id):
     )
 
 
-def ranked_payload(recommendations, profile, ranking, saved_careers=()):
+def get_ranking_feedback(db, user_id):
+    return dict(
+        db.query(RecommendationFeedback.career_id, RecommendationFeedback.feedback)
+        .filter(RecommendationFeedback.user_id == user_id)
+        .all()
+    )
+
+
+def ranked_payload(recommendations, profile, ranking, saved_careers=(), feedback=None):
     model_available = ranker_configured()
+    feedback = feedback or {}
     ordered, source = recommendations, "rules"
     reasons = {}
     if ranking == "model" and model_available:
         ordered, source = rank_recommendations(profile, recommendations)
-    elif ranking == "personalized" and saved_careers:
-        ordered, reasons = personalize_recommendations(recommendations, saved_careers)
+    elif ranking == "personalized" and (saved_careers or feedback):
+        ordered, reasons = personalize_recommendations(recommendations, saved_careers, feedback)
         if reasons:
             source = "personalized"
 
-    rows = [recommendation_to_dict(item) for item in ordered]
+    rows = [
+        {**recommendation_to_dict(item), "feedback": feedback.get(item.career_id)}
+        for item in ordered
+    ]
     if source == "trained":
         for rank, row in enumerate(rows, 1):
             row["model_rank"] = rank
@@ -102,6 +118,44 @@ def ranked_payload(recommendations, profile, ranking, saved_careers=()):
         "model_ranking_available": model_available,
         "recommendations": rows,
     }
+
+
+@router.put("/{career_id}/feedback")
+def set_recommendation_feedback(
+    career_id: UUID,
+    request: RecommendationFeedbackRequest,
+    firebase_user=Depends(get_current_firebase_user),
+    db: Session = Depends(get_db),
+):
+    user = get_current_db_user(firebase_user, db)
+    if request.feedback is None:
+        db.query(RecommendationFeedback).filter(
+            RecommendationFeedback.user_id == user.user_id,
+            RecommendationFeedback.career_id == career_id,
+        ).delete(synchronize_session=False)
+    else:
+        recommendation = (
+            db.query(Recommendation.career_id)
+            .join(Career, Recommendation.career_id == Career.career_id)
+            .filter(
+                Recommendation.user_id == user.user_id,
+                Recommendation.career_id == career_id,
+                Career.status.is_(True),
+            )
+            .first()
+        )
+        if recommendation is None:
+            raise HTTPException(status_code=404, detail="Active recommendation not found.")
+        insert = sqlite_insert if db.get_bind().dialect.name == "sqlite" else postgres_insert
+        statement = insert(RecommendationFeedback).values(
+            user_id=user.user_id, career_id=career_id, feedback=request.feedback,
+        )
+        db.execute(statement.on_conflict_do_update(
+            index_elements=[RecommendationFeedback.user_id, RecommendationFeedback.career_id],
+            set_={"feedback": statement.excluded.feedback},
+        ))
+    db.commit()
+    return {"career_id": str(career_id), "feedback": request.feedback}
 
 
 @router.post("/generate")
@@ -183,7 +237,7 @@ def generate_recommendations(
     return {
         "message": "Recommendations generated successfully",
         "total_careers_analyzed": len(careers),
-        **ranked_payload(generated_recommendations, profile, ranking, saved_careers),
+        **ranked_payload(generated_recommendations, profile, ranking, saved_careers, get_ranking_feedback(db, user.user_id)),
     }
 
 
@@ -207,4 +261,5 @@ def get_my_recommendations(
     if recommendations and ranking == "model" and ranker_configured():
         profile = db.query(StudentProfile).filter(StudentProfile.user_id == user.user_id).first()
     saved_careers = get_saved_ranking_preferences(db, user.user_id) if recommendations and ranking == "personalized" else ()
-    return ranked_payload(recommendations, profile, ranking, saved_careers)
+    feedback = get_ranking_feedback(db, user.user_id) if recommendations else {}
+    return ranked_payload(recommendations, profile, ranking, saved_careers, feedback)

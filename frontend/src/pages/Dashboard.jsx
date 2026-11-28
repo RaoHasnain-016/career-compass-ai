@@ -479,8 +479,8 @@ function Dashboard() {
           <div className="analytics-grid">
             <motion.div
               className="ai-insight-card"
-              initial={{ opacity: 0, x: -24 }}
-              animate={{ opacity: 1, x: 0 }}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
             >
               <div className="card-heading">
                 <div>
@@ -565,8 +565,8 @@ function Dashboard() {
 
             <motion.div
               className="chart-card"
-              initial={{ opacity: 0, x: 24 }}
-              animate={{ opacity: 1, x: 0 }}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
             >
               <div className="card-heading small">
                 <h2>Skill Portfolio</h2>
@@ -642,7 +642,7 @@ function Dashboard() {
             <div className="chart-card dark">
               <h2>Interest Strength</h2>
               <ResponsiveContainer width="100%" height={290}>
-                <RadarChart data={computed.interestStrength}>
+                <RadarChart data={computed.interestStrength} outerRadius="55%">
                   <PolarGrid />
                   <PolarAngleAxis dataKey="subject" tick={{ fill: "#cbd5e1", fontSize: 11 }} />
                   <Radar

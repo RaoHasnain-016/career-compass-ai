@@ -1,5 +1,5 @@
 import uuid
-from sqlalchemy import Column, Numeric, Text, DateTime, ForeignKey, String
+from sqlalchemy import CheckConstraint, Column, Numeric, Text, DateTime, ForeignKey, String
 from sqlalchemy.dialects.postgresql import UUID, ARRAY
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
@@ -33,3 +33,14 @@ class Recommendation(Base):
 
     user = relationship("User")
     career = relationship("Career")
+
+
+class RecommendationFeedback(Base):
+    __tablename__ = "recommendation_feedback"
+    __table_args__ = (
+        CheckConstraint("feedback IN ('helpful', 'less_relevant')", name="ck_recommendation_feedback_value"),
+    )
+
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.user_id", ondelete="CASCADE"), primary_key=True)
+    career_id = Column(UUID(as_uuid=True), ForeignKey("careers.career_id", ondelete="CASCADE"), primary_key=True)
+    feedback = Column(String(20), nullable=False)

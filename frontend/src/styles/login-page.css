@@ -370,7 +370,7 @@
 
 @media (max-width: 1100px) {
   .login-shell {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .login-right {
@@ -386,6 +386,7 @@
   .login-right {
     padding: 24px 20px 40px;
     min-height: 420px;
+    background: linear-gradient(145deg, #0a68b1, #072b5c);
   }
 
   .login-form-wrap {

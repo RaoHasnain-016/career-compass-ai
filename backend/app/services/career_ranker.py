@@ -1,5 +1,6 @@
 """Optional server-side ranking from a trusted local LightGBM artifact."""
 
+from collections import defaultdict
 from functools import lru_cache
 from hashlib import sha256
 import json
@@ -23,6 +24,7 @@ MODEL_FORMAT = "career-compass-lightgbm-v1"
 LINEAR_MODEL_FORMAT = "career-compass-linear-v1"
 ACTIONABLE_ELIGIBILITY = {"eligible", "near_eligible"}
 PREFERENCE_BOOSTS = {"saved_career": 8, "saved_field": 4}
+FEEDBACK_SIGNALS = {"helpful": 1, "less_relevant": -1}
 _load_lock = Lock()
 FEATURE_NAMES = (
     "interest_overlap", "skill_overlap", "subject_overlap",
@@ -63,25 +65,49 @@ def ranking_policy_key(eligibility, learned_score, baseline_score, title):
     return later_path, -learned_score, -baseline_score, title.casefold()
 
 
-def personalize_recommendations(recommendations, saved_careers):
-    """Apply the student's current bookmarks to order without changing match scores."""
+def personalize_recommendations(recommendations, saved_careers, feedback=None):
+    """Adapt one student's order from their current ratings and bookmarks."""
+    feedback = feedback or {}
     saved_ids = {career_id for career_id, _ in saved_careers}
     saved_fields = {field.strip().casefold() for _, field in saved_careers if field and field.strip()}
+    field_signals = defaultdict(list)
+    for item in recommendations:
+        field = (item.career.field or "").strip().casefold()
+        signal = FEEDBACK_SIGNALS.get(feedback.get(item.career_id))
+        if field and signal and item.career.status:
+            field_signals[field].append(signal)
+    # Give related careers a small adjustment, with two neutral observations
+    # so a single rating does not outweigh a direct career preference.
+    field_weights = {field: 6 * sum(signals) / (len(signals) + 2) for field, signals in field_signals.items()}
+
     reasons = {}
+    adjustments = {}
     for item in recommendations:
         if item.eligibility_status not in ACTIONABLE_ELIGIBILITY or not item.career.status:
             continue
-        if item.career_id in saved_ids:
-            reasons[item.career_id] = "saved_career"
-        elif (item.career.field or "").strip().casefold() in saved_fields:
-            reasons[item.career_id] = "saved_field"
+        value = feedback.get(item.career_id)
+        field = (item.career.field or "").strip().casefold()
+        related_weight = field_weights.get(field, 0)
+        if value in FEEDBACK_SIGNALS:
+            reason, adjustment = f"feedback_{value}", 12 * FEEDBACK_SIGNALS[value]
+        elif item.career_id in saved_ids:
+            reason, adjustment = "saved_career", PREFERENCE_BOOSTS["saved_career"]
+        elif related_weight:
+            reason = "feedback_field_helpful" if related_weight > 0 else "feedback_field_less_relevant"
+            adjustment = related_weight
+        elif field in saved_fields:
+            reason, adjustment = "saved_field", PREFERENCE_BOOSTS["saved_field"]
+        else:
+            continue
+        reasons[item.career_id] = reason
+        adjustments[item.career_id] = adjustment
 
     if not reasons:
         return recommendations, reasons
 
     ordered = sorted(recommendations, key=lambda item: (
         item.eligibility_status not in ACTIONABLE_ELIGIBILITY,
-        -float(item.match_score) - PREFERENCE_BOOSTS.get(reasons.get(item.career_id), 0),
+        -float(item.match_score) - adjustments.get(item.career_id, 0),
     ))
     return ordered, reasons
 

@@ -270,6 +270,23 @@ class ChatbotRouteTests(unittest.TestCase):
         self.assertEqual(self.db.commit.call_count, 3)
         self.ask_provider.assert_not_called()
 
+    def test_curated_knowledge_replies_cite_the_original_reference(self):
+        self.db.refresh.side_effect = lambda message: setattr(message, "message_id", uuid4())
+        for question, snippet, host in (
+            ("AOA, how do I write a CV?", "projects", "nationalcareers.service.gov.uk"),
+            ("Interview ki tayari kaise karun?", "Aisa project", "nationalcareers.service.gov.uk"),
+            ("پاکستان کا ووکیشنل فریم ورک کیا ہے؟", "فنی تعلیم", "navttc.gov.pk"),
+        ):
+            with self.subTest(question=question):
+                response = self.ask(message=question)
+                self.assertEqual(response["reply_mode"], "knowledge_base")
+                self.assertEqual(response["source_status"], "reference")
+                self.assertIsNone(response["sources_checked_at"])
+                self.assertIn(snippet, response["response"])
+                self.assertTrue(response["sources"][0]["url"].startswith(f"https://{host}/"))
+        self.ask_provider.assert_not_called()
+        self.db.query.assert_not_called()
+
     def test_comparison_uses_saved_facts_without_a_model(self):
         self.db.refresh.side_effect = lambda message: setattr(message, "message_id", uuid4())
         context = json.dumps({

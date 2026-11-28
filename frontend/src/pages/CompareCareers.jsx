@@ -76,6 +76,7 @@ export default function CompareCareers() {
         </div>
       </header>
 
+      <div className="table-scroll" role="region" aria-label="Career comparison" tabIndex={0}>
       <table className="table">
         <thead>
           <tr>
@@ -124,6 +125,7 @@ export default function CompareCareers() {
           </tr>
         </tbody>
       </table>
+      </div>
     </StudentLayout>
   );
 }

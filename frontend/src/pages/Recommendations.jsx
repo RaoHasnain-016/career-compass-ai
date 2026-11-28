@@ -44,6 +44,7 @@ import {
   getMyRecommendationRanking,
   getSavedCareers,
   saveCareer,
+  updateRecommendationFeedback,
 } from "../services/recommendationService";
 import { removeSavedCareer } from "../services/savedCareerService";
 import { getStudentProfile, selectCareer } from "../services/profileService";
@@ -66,6 +67,10 @@ const rankingModes = { model: "model", personalized: "personalized" };
 const personalizationLabels = {
   saved_career: "Based on your saved career",
   saved_field: "Related to a career you saved",
+  feedback_helpful: "You marked this career as helpful",
+  feedback_less_relevant: "You marked this career as less relevant",
+  feedback_field_helpful: "Related to a career you found helpful",
+  feedback_field_less_relevant: "Related to a career you found less relevant",
 };
 
 const navLinks = [
@@ -370,6 +375,33 @@ function Recommendations() {
     }
   };
 
+  async function handleFeedback(careerId, feedback) {
+    if (!careerId || savingId || changingRanking || generating) return;
+
+    setSavingId(careerId);
+    setError("");
+    try {
+      const result = await updateRecommendationFeedback(careerId, feedback);
+      setRecommendations((items) => items.map((item) =>
+        (item.career_id || item.career?.career_id) === careerId
+          ? { ...item, feedback: result.feedback }
+          : item
+      ));
+      if (sortBy === "personalized") {
+        try {
+          const ranking = await getMyRecommendationRanking("personalized");
+          setRecommendations(ranking.recommendations);
+        } catch {
+          setError("Feedback saved. Reload to refresh your personalized order.");
+        }
+      }
+    } catch (error) {
+      setError(error.message || "Could not save your feedback.");
+    } finally {
+      setSavingId("");
+    }
+  }
+
   const handleDownloadReport = () => {
     downloadCareerReport({
       profile,
@@ -479,10 +511,9 @@ function Recommendations() {
 
           {error && <div className="rec-error" role="alert">{error}</div>}
 
-          {sortBy === "personalized" && recommendations.length > 0 && (
+          {recommendations.length > 0 && (
             <p className="rec-ranking-hint">
-              Save or remove careers to adjust the order of options you can pursue.
-              Match scores still come from your profile.
+              Rate your matches to improve Personalized Order. Select a rating again to clear it.
             </p>
           )}
 
@@ -512,7 +543,7 @@ function Recommendations() {
                   <div className="rec-hero-info">
                     <span>
                       <FaMagic />
-                      {sortBy === "model" ? "Trained Ranking Preview" : sortBy === "personalized" ? "Based on Your Saved Careers" : "Profile-Based Matches"}
+                      {sortBy === "model" ? "Trained Ranking Preview" : sortBy === "personalized" ? "Feedback and Saved Careers" : "Profile-Based Matches"}
                     </span>
 
                     <h2>Your Best Career Matches</h2>
@@ -687,6 +718,25 @@ function Recommendations() {
                             {item.improvement_advice}
                           </p>
                         )}
+
+                        <div className="rec-feedback" role="group" aria-label={`Feedback for ${title}`}>
+                          <button
+                            type="button"
+                            aria-pressed={item.feedback === "helpful"}
+                            disabled={!careerId || !!savingId || changingRanking || generating}
+                            onClick={() => handleFeedback(careerId, item.feedback === "helpful" ? null : "helpful")}
+                          >
+                            Helpful
+                          </button>
+                          <button
+                            type="button"
+                            aria-pressed={item.feedback === "less_relevant"}
+                            disabled={!careerId || !!savingId || changingRanking || generating}
+                            onClick={() => handleFeedback(careerId, item.feedback === "less_relevant" ? null : "less_relevant")}
+                          >
+                            Less relevant
+                          </button>
+                        </div>
 
                         <div className="rec-card-actions">
                           <div>
